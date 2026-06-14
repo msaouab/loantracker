@@ -1,13 +1,52 @@
 import { NextResponse } from "next/server";
 import { AppError, ValidationError } from "@/lib/errors";
+import type { ApiErrorBody } from "@/lib/api-response";
+
+function codeForStatus(status: number): string {
+  switch (status) {
+    case 400:
+      return "bad_request";
+    case 401:
+      return "unauthorized";
+    case 403:
+      return "forbidden";
+    case 404:
+      return "not_found";
+    case 409:
+      return "conflict";
+    case 500:
+      return "internal_error";
+    default:
+      return "error";
+  }
+}
+
+export function apiError(
+  message: string,
+  status: number,
+  opts?: { code?: string; fields?: Record<string, string[]> }
+) {
+  const body: ApiErrorBody = {
+    success: false,
+    error: {
+      message,
+      code: opts?.code ?? codeForStatus(status),
+      ...(opts?.fields ? { fields: opts.fields } : {}),
+    },
+  };
+  return NextResponse.json<ApiErrorBody>(body, { status });
+}
 
 export function toErrorResponse(error: unknown): Response {
   if (error instanceof ValidationError) {
-    return NextResponse.json({ error: error.fieldErrors }, { status: 400 });
+    return apiError("Validation failed", 400, {
+      code: "validation_error",
+      fields: error.fieldErrors,
+    });
   }
   if (error instanceof AppError) {
-    return NextResponse.json({ error: error.message }, { status: error.status });
+    return apiError(error.message, error.status);
   }
   console.error("Unhandled API error:", error);
-  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  return apiError("Internal server error", 500);
 }

@@ -105,6 +105,25 @@ export async function requireAdminUserId(): Promise<string> {
   return session.user.id;
 }
 
+/**
+ * Manager-only API guard. Admins do not own loans/payments, so loan and payment
+ * endpoints reject them with 403 — enforcing "admins have no portfolio" at the
+ * API, not just hiding it in the UI.
+ */
+export async function requireManagerUserId(): Promise<string> {
+  const session = await getSession();
+
+  if (!session?.user.id) {
+    throw new UnauthorizedError();
+  }
+
+  if (session.user.isAdmin) {
+    throw new ForbiddenError();
+  }
+
+  return session.user.id;
+}
+
 /** Server-side admin guard for RSC pages — redirects instead of throwing. */
 export async function requireAdminOrRedirect(): Promise<string> {
   const session = await getSession();
@@ -115,6 +134,21 @@ export async function requireAdminOrRedirect(): Promise<string> {
 
   if (!session.user.isAdmin) {
     redirect("/dashboard");
+  }
+
+  return session.user.id;
+}
+
+/** Keep loan portfolio pages manager-only. */
+export async function requireManagerOrRedirect(): Promise<string> {
+  const session = await getSession();
+
+  if (!session?.user.id) {
+    redirect("/auth/login");
+  }
+
+  if (session.user.isAdmin) {
+    redirect("/admin/dashboard");
   }
 
   return session.user.id;

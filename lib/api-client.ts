@@ -9,56 +9,46 @@ export class ApiRequestError extends Error {
   }
 }
 
-function extractFieldErrors(data: unknown): Record<string, string[]> | undefined {
-  if (!data || typeof data !== "object" || !("error" in data)) {
+type ApiEnvelope = {
+  success?: boolean;
+  data?: unknown;
+  error?: { message?: unknown; code?: unknown; fields?: unknown };
+};
+
+function parseFieldErrors(fields: unknown): Record<string, string[]> | undefined {
+  if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
     return undefined;
   }
 
-  const error = (data as { error: unknown }).error;
-  if (!error || typeof error !== "object" || Array.isArray(error)) {
-    return undefined;
-  }
-
-  const entries = Object.entries(error as Record<string, unknown>);
-  if (entries.length === 0) {
-    return undefined;
-  }
-
-  const fieldErrors: Record<string, string[]> = {};
-  for (const [key, value] of entries) {
+  const result: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(fields as Record<string, unknown>)) {
     if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
-      fieldErrors[key] = value;
+      result[key] = value as string[];
     }
   }
 
-  return Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined;
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
-export function extractApiError(data: unknown, fallback: string): string {
-  if (data && typeof data === "object" && "error" in data) {
-    const err = (data as { error: unknown }).error;
-    if (typeof err === "string") return err;
-    if (err && typeof err === "object") {
-      const first = Object.values(err as Record<string, string[]>)[0];
-      if (Array.isArray(first) && first[0]) return first[0];
-    }
-  }
-  return fallback;
-}
-
+/**
+ * Fetch + unwrap the unified API envelope.
+ * Returns `data` on success; throws `ApiRequestError` (message + field errors)
+ * on any non-2xx response or `{ success: false }` body.
+ */
 export async function request<T>(
   url: string,
   init: RequestInit,
   fallback: string
 ): Promise<T> {
   const res = await fetch(url, init);
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    throw new ApiRequestError(
-      extractApiError(data, fallback),
-      res.status,
-      extractFieldErrors(data)
-    );
+  const body = (await res.json().catch(() => null)) as ApiEnvelope | null;
+
+  if (!res.ok || body?.success === false) {
+    const error = body?.error;
+    const message =
+      error && typeof error.message === "string" ? error.message : fallback;
+    throw new ApiRequestError(message, res.status, parseFieldErrors(error?.fields));
   }
-  return data as T;
+
+  return body?.data as T;
 }

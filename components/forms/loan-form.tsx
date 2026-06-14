@@ -121,6 +121,7 @@ export function LoanForm({
                 id="amountPaid"
                 value={formatCurrency(values.amountPaid)}
                 readOnly
+                className="font-medium text-success"
               />
               <p className="text-xs text-muted-foreground">
                 Record partial payments from the loan list to update this total.
@@ -157,7 +158,11 @@ export function LoanForm({
 
         <div className="space-y-2">
           <Label>Outstanding Amount</Label>
-          <Input value={formatCurrency(outstanding)} readOnly />
+          <Input
+            value={formatCurrency(outstanding)}
+            readOnly
+            className="font-medium text-destructive"
+          />
         </div>
 
         <div className="space-y-2 sm:col-span-2">

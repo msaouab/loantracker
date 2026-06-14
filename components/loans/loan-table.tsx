@@ -307,7 +307,9 @@ export function LoanTable({
                       <TableCell>{formatCurrency(loan.totalAmount)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span>{formatCurrency(loan.amountPaid)}</span>
+                          <span className="font-medium text-success tabular-nums">
+                            {formatCurrency(loan.amountPaid)}
+                          </span>
                           {loan.paymentCount > 0 ? (
                             <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                               {loan.paymentCount}
@@ -315,7 +317,9 @@ export function LoanTable({
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell>{formatCurrency(loan.outstanding)}</TableCell>
+                      <TableCell className="font-medium text-destructive tabular-nums">
+                        {formatCurrency(loan.outstanding)}
+                      </TableCell>
                       <TableCell>{format(new Date(loan.loanDate), "MMM d, yyyy")}</TableCell>
                       <TableCell>
                         <TrustBadge trusted={loan.clientTrust} />

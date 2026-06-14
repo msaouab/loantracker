@@ -126,6 +126,53 @@ export async function updateUserStatus(
   return updated;
 }
 
+export async function getManagerForAdmin(id: string) {
+  const user = await findUserWithCounts(id);
+  if (!user) throw new NotFoundError("User not found");
+  if (user.isAdmin) {
+    throw new AppError("Admin accounts cannot be viewed here", 400);
+  }
+  return user;
+}
+
+export async function updateManagerProfileByAdmin(
+  adminId: string,
+  id: string,
+  input: { fullName: string; email: string }
+) {
+  assertNotSelf(adminId, id, "modify");
+  await getModifiableUserOrThrow(id);
+
+  const emailTaken = await prisma.user.findFirst({
+    where: { email: input.email, NOT: { id } },
+    select: { id: true },
+  });
+  if (emailTaken) {
+    throw new AppError("Email already registered", 409);
+  }
+
+  return prisma.user.update({
+    where: { id },
+    data: {
+      fullName: input.fullName,
+      email: input.email,
+    },
+    select: userAdminSelect,
+  });
+}
+
+export async function resetManagerPasswordByAdmin(
+  adminId: string,
+  id: string,
+  newPassword: string
+) {
+  assertNotSelf(adminId, id, "modify");
+  await getModifiableUserOrThrow(id);
+
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+  await bumpSessionVersion(id, { password: hashedPassword });
+}
+
 export async function deleteUser(adminId: string, id: string) {
   assertNotSelf(adminId, id, "delete");
   const target = await prisma.user.findUnique({ where: { id } });

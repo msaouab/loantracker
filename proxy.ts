@@ -9,6 +9,7 @@ export const config = {
     "/loans/:path*",
     "/admin/:path*",
     "/settings/:path*",
+    "/docs/:path*",
     "/auth/:path*",
   ],
 };

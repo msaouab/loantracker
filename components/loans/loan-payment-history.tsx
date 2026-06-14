@@ -161,9 +161,16 @@ export function LoanPaymentHistory({
           <p className="text-sm font-medium">Payment history</p>
           <p className="text-xs text-muted-foreground">
             {payments.length} payment{payments.length === 1 ? "" : "s"} recorded
-            {outstanding > 0
-              ? ` · ${formatCurrency(outstanding)} remaining`
-              : " · fully paid"}
+            {outstanding > 0 ? (
+              <>
+                {" · "}
+                <span className="text-destructive">
+                  {formatCurrency(outstanding)} remaining
+                </span>
+              </>
+            ) : (
+              " · fully paid"
+            )}
           </p>
         </div>
         {outstanding > 0 ? (
@@ -267,7 +274,7 @@ export function LoanPaymentHistory({
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {format(new Date(payment.paidAt), "MMM d, yyyy")}
                   </td>
-                  <td className="px-3 py-2.5 font-medium tabular-nums">
+                  <td className="px-3 py-2.5 font-medium text-success tabular-nums">
                     {formatCurrency(payment.amount)}
                   </td>
                   <td className="px-3 py-2.5 text-muted-foreground">

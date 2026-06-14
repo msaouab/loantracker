@@ -11,7 +11,7 @@ _Part-by-part review of the application: architecture, features, security, desig
 |-------|--------|
 | `tsc --noEmit` | ✅ Clean |
 | `eslint .` | ✅ Clean |
-| `vitest run` | ✅ 16 passing (2 files) |
+| `vitest run` | ✅ 19 passing (2 files) |
 | Architecture | ✅ Strong (service layer, typed errors, thin routes) |
 
 **Severity legend:** 🔴 must fix · 🟠 should fix · 🟡 nice to have · ✅ good
@@ -38,7 +38,8 @@ DB-revalidated `getSession()`; global revocation via `sessionVersion`; `__Host-`
 ---
 
 ## 2. Authorization & Admin — ✅ Good
-`withUser`/`withAdmin` wrappers; admin pages guarded by `requireAdminOrRedirect()` (redirects, not throws); self/other-admin protection in `users-service.ts`.
+`withUser`/`withManager`/`withAdmin` wrappers; admin pages guarded by `requireAdminOrRedirect()`, loan pages by `requireManagerOrRedirect()` (redirects, not throws); self/other-admin protection in `users-service.ts`.
+- **Role separation enforced end-to-end:** admins have a fully separate area (`/admin/dashboard`, `/admin/users`, `/admin/activity`, `/admin/settings`) and no portfolio. Loan/payment/dashboard-stats APIs use `withManager` (403 for admins — not just hidden in the UI); activity tabs are role-scoped (managers: loans/payments; admins: users) via `managerOnly`/`adminOnly` flags; Settings is split (`/settings` manager-only with deleted-loans, `/admin/settings` admin-only). The activity feed decouples `admin` (role/tabs) from `orgWide` (org-wide audit endpoint + actor column).
 - 🟡 Proxy `/admin` gate uses stale JWT `isAdmin`; authoritative check is server-side. Defense-in-depth, fine.
 
 ---
@@ -65,7 +66,9 @@ Typed action catalog + tab filtering; user-scoped vs admin-wide listing; `logAct
 ---
 
 ## 7. API layer & architecture — ✅ Strong
-Thin routes → services; `parseOrThrow` + `ValidationError` → 400; shared serializers; read routes return 500 (not 401) on real failures; clients use the shared `request()` helper; pagination parsing centralized in `lib/pagination.ts`; cron purge errors isolated via `Promise.allSettled`.
+Thin routes → services; `parseOrThrow` + `ValidationError` → 400; shared serializers; read routes return 500 (not 401) on real failures; pagination parsing centralized in `lib/pagination.ts`; cron purge errors isolated via `Promise.allSettled`.
+- **Unified response envelope.** Every endpoint returns `{ success: true, data }` (via `apiOk`, `lib/api-response.ts`) or `{ success: false, error: { message, code, fields? } }` (via `apiError`/`toErrorResponse`, `lib/error-response.ts`). The client `request()` helper unwraps `data` on success and throws `ApiRequestError` (message + field errors) on failure, so call sites and form field-error handling are unchanged.
+- **No dead endpoints.** Removed unused `GET /api/auth/me` and `GET /api/dashboard/stats` (no consumers; `getDashboardStats` itself remains, used by the admin user detail route) and the deprecated `cron/purge-deleted-loans` alias; also pruned empty scaffolding dirs (`api/auth/{login,activate,…}`, `(app)/{activity,completed-loans}`, etc.).
 
 ---
 
@@ -98,8 +101,18 @@ Tailwind 4 + shadcn/ui; no-flash theme init; responsive mobile/desktop layouts; 
 ---
 
 ## 13. Testing — ✅ Good (unit), ⚠️ no integration/E2E
-Vitest configured (`npm test` → `vitest run`); **16 passing across 2 files**. Coverage now includes API error mapping (`toErrorResponse`), the `buildLoanWhereSql` builder, and the purge→snapshot→dashboard recovery-rate invariant — the highest-value logic paths.
+Vitest configured (`npm test` → `vitest run`); **19 passing across 2 files**. Coverage includes API error mapping (`toErrorResponse`/`apiOk` envelope), the `buildLoanWhereSql` builder, role-scoped activity tabs, and the purge→snapshot→dashboard recovery-rate invariant — the highest-value logic paths.
 - 🟡 Still unit-only: no route-integration tests (hitting handlers with a DB) or E2E. Add a thin integration layer for auth + loan/payment flows when practical.
+
+---
+
+## 14. API documentation (OpenAPI / Swagger) — ✅ Good, secured
+Full OpenAPI 3.0 spec (`lib/openapi/`) served at `/api/openapi`, rendered by self-hosted Swagger UI at `/docs`. Covers every backend route+method; documents the unified envelope and `sessionCookie`/`cronBearer` security schemes.
+- **Self-hosted UI:** assets are copied from `swagger-ui-dist` into `public/swagger/` on install/build (`scripts/copy-swagger-assets.mjs`) — no external CDN / supply-chain risk, no SRI needed.
+- **Access-gated:** `/api/openapi` returns 404 for non-admins; `/docs` is admin-only (`requireAdminOrRedirect` + proxy matcher + edge `authorized` check). The spec is no longer publicly readable.
+- **Security headers:** `next.config.ts` sets CSP (`default-src 'self'`, no external origins), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
+- **Dark mode:** the Swagger container forces a light color-scheme + solid background so docs stay readable while the app is in dark mode.
+- 🟡 Cookie `apiKey` schemes can't encode roles, so manager-vs-admin requirements live in each operation's description.
 
 ---
 

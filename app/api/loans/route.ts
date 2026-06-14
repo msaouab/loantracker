@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { withUser } from "@/lib/api-handler";
+import { apiOk } from "@/lib/api-response";
+import { withManager } from "@/lib/api-handler";
 import { parseOrThrow } from "@/lib/errors";
 import { ActivityActions } from "@/lib/activity-log";
 import { logActivityFromRequest } from "@/lib/activity-log-service";
@@ -13,7 +13,7 @@ import { parseLoanSort } from "@/lib/loan-sort-types";
 import { parseLoanPageSize } from "@/lib/loan-list";
 import { createLoanSchema } from "@/lib/validations";
 
-export const GET = withUser(async (req, userId) => {
+export const GET = withManager(async (req, userId) => {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search")?.trim() ?? "";
   const dateFrom = searchParams.get("dateFrom");
@@ -45,7 +45,7 @@ export const GET = withUser(async (req, userId) => {
     prisma.loan.count({ where }),
   ]);
 
-  return NextResponse.json({
+  return apiOk({
     loans: loans.map((loan) => ({
       ...serializeLoan(loan),
       paymentCount: loan._count?.payments ?? 0,
@@ -59,7 +59,7 @@ export const GET = withUser(async (req, userId) => {
   });
 });
 
-export const POST = withUser(async (req, userId) => {
+export const POST = withManager(async (req, userId) => {
   const input = parseOrThrow(createLoanSchema, await req.json());
   const loan = await createLoan(userId, input);
 
@@ -74,7 +74,7 @@ export const POST = withUser(async (req, userId) => {
     },
   });
 
-  return NextResponse.json(
+  return apiOk(
     {
       loan: {
         ...serializeLoan(loan),

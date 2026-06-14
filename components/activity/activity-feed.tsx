@@ -121,7 +121,10 @@ function ActivityRow({
 }
 
 type ActivityFeedProps = {
+  /** Admin role → admin-scoped tabs (no loans/payments, adds users). */
   admin?: boolean;
+  /** Org-wide audit view → fetch all users' activity and show the actor. */
+  orgWide?: boolean;
   embedded?: boolean;
   title?: string;
   description?: string;
@@ -129,6 +132,7 @@ type ActivityFeedProps = {
 
 export function ActivityFeed({
   admin = false,
+  orgWide = false,
   embedded = false,
   title = "Activity",
   description = "Your recent actions and sign-in history.",
@@ -158,7 +162,7 @@ export function ActivityFeed({
       const data = await fetchActivities({
         page,
         pageSize: 20,
-        admin,
+        admin: orgWide,
         category: categoryFilter,
       });
       applyActivityData(data);
@@ -167,7 +171,7 @@ export function ActivityFeed({
     } finally {
       setLoading(false);
     }
-  }, [admin, applyActivityData, categoryFilter, page]);
+  }, [orgWide, applyActivityData, categoryFilter, page]);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,7 +179,7 @@ export function ActivityFeed({
     void fetchActivities({
       page,
       pageSize: 20,
-      admin,
+      admin: orgWide,
       category: categoryFilter,
     })
       .then((data) => {
@@ -193,7 +197,7 @@ export function ActivityFeed({
     return () => {
       cancelled = true;
     };
-  }, [admin, applyActivityData, categoryFilter, page]);
+  }, [orgWide, applyActivityData, categoryFilter, page]);
 
   function goToPage(nextPage: number) {
     setLoading(true);
@@ -261,7 +265,7 @@ export function ActivityFeed({
       ) : (
         <div className="divide-y divide-border/60">
           {activities.map((item) => (
-            <ActivityRow key={item.id} item={item} showActor={admin} />
+            <ActivityRow key={item.id} item={item} showActor={orgWide} />
           ))}
         </div>
       )}

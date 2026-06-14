@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Check, Plus, RefreshCw, ShieldBan, Snowflake } from "lucide-react";
@@ -176,7 +177,12 @@ export function UserTable() {
                     return (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
-                          {user.fullName}
+                          <Link
+                            href={`/admin/users/${user.id}`}
+                            className="hover:text-primary hover:underline"
+                          >
+                            {user.fullName}
+                          </Link>
                           {user.isAdmin ? (
                             <Badge variant="outline" className="ml-2">
                               Admin

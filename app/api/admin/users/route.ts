@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiOk } from "@/lib/api-response";
 import { withAdmin } from "@/lib/api-handler";
 import { parseOrThrow } from "@/lib/errors";
 import { ActivityActions } from "@/lib/activity-log";
@@ -9,7 +9,7 @@ import { adminCreateUserSchema } from "@/lib/validations";
 export const GET = withAdmin(async () => {
   const users = await listUsers();
 
-  return NextResponse.json({
+  return apiOk({
     users: users.map(serializeUser),
   });
 });
@@ -26,5 +26,5 @@ export const POST = withAdmin(async (req, adminUserId) => {
     metadata: { email: user.email, isAdmin: user.isAdmin },
   });
 
-  return NextResponse.json({ user: serializeUser(user) }, { status: 201 });
+  return apiOk({ user: serializeUser(user) }, { status: 201 });
 });

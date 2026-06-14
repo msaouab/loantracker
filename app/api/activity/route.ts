@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiOk } from "@/lib/api-response";
 import { withUser } from "@/lib/api-handler";
 import { listActivitiesForUser } from "@/lib/activity-log-service";
 import { parseActivityCategory } from "@/lib/activity-query";
@@ -12,5 +12,5 @@ export const GET = withUser(async (req, userId) => {
 
   const result = await listActivitiesForUser(userId, { page, pageSize, category });
 
-  return NextResponse.json(result);
+  return apiOk(result);
 });

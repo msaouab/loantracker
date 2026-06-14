@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiOk } from "@/lib/api-response";
 import bcrypt from "bcryptjs";
 import { toErrorResponse } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ success: true });
+    return apiOk({ success: true });
   } catch (error) {
     return toErrorResponse(error);
   }

@@ -2,12 +2,16 @@
 
 import { useTheme } from "@/components/theme-provider";
 import { useMounted } from "@/hooks/use-mounted";
+import type { Theme } from "@/lib/theme";
 import { Laptop, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -16,6 +20,30 @@ const themes = [
   { value: "dark", label: "Dark", icon: Moon },
   { value: "system", label: "System", icon: Laptop },
 ] as const;
+
+export function ThemeMenuItems() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <>
+      <DropdownMenuLabel>Theme</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={theme}
+        onValueChange={(value) => setTheme(value as Theme)}
+      >
+        {themes.map((item) => {
+          const Icon = item.icon;
+          return (
+            <DropdownMenuRadioItem key={item.value} value={item.value}>
+              <Icon className="mr-2 h-4 w-4" />
+              {item.label}
+            </DropdownMenuRadioItem>
+          );
+        })}
+      </DropdownMenuRadioGroup>
+    </>
+  );
+}
 
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme();

@@ -80,8 +80,18 @@ export default function LoanDetailPage({
 
       <div className="surface-card grid gap-4 p-4 sm:grid-cols-2 sm:gap-6 sm:p-6">
           <DetailItem label="Total Amount" value={formatCurrency(loan.totalAmount)} />
-          <DetailItem label="Amount Paid" value={formatCurrency(loan.amountPaid)} />
-          <DetailItem label="Outstanding" value={formatCurrency(loan.outstanding)} />
+          <DetailItem
+            label="Amount Paid"
+            value={
+              <span className="text-success">{formatCurrency(loan.amountPaid)}</span>
+            }
+          />
+          <DetailItem
+            label="Outstanding"
+            value={
+              <span className="text-destructive">{formatCurrency(loan.outstanding)}</span>
+            }
+          />
           <DetailItem
             label="Loan Date"
             value={format(new Date(loan.loanDate), "MMM d, yyyy")}

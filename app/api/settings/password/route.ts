@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiOk } from "@/lib/api-response";
 import { withUser } from "@/lib/api-handler";
 import { parseOrThrow } from "@/lib/errors";
 import { ActivityActions } from "@/lib/activity-log";
@@ -21,5 +21,5 @@ export const PATCH = withUser(async (req, userId) => {
     entityType: "session",
   });
 
-  return NextResponse.json({ success: true });
+  return apiOk({ success: true });
 });

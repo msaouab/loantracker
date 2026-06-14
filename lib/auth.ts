@@ -112,23 +112,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         nextUrl.pathname.startsWith("/dashboard") ||
         nextUrl.pathname.startsWith("/loans") ||
         nextUrl.pathname.startsWith("/admin") ||
-        nextUrl.pathname.startsWith("/settings");
+        nextUrl.pathname.startsWith("/settings") ||
+        nextUrl.pathname.startsWith("/docs");
 
       if (isProtected && !isLoggedIn) {
         return false;
       }
 
       // Optimistic admin check from stale JWT — getSession() enforces on the server.
+      // /docs (API spec) is admin-only alongside /admin.
       if (
         isLoggedIn &&
-        nextUrl.pathname.startsWith("/admin") &&
+        (nextUrl.pathname.startsWith("/admin") ||
+          nextUrl.pathname.startsWith("/docs")) &&
         !session?.user?.isAdmin
       ) {
         return Response.redirect(new URL("/dashboard", nextUrl));
       }
 
+      if (
+        isLoggedIn &&
+        session?.user?.isAdmin &&
+        (nextUrl.pathname.startsWith("/loans") ||
+          nextUrl.pathname === "/dashboard")
+      ) {
+        return Response.redirect(new URL("/admin/dashboard", nextUrl));
+      }
+
       if (isLoggedIn && isAuthPage) {
-        return Response.redirect(new URL("/dashboard", nextUrl));
+        return Response.redirect(
+          new URL(session?.user?.isAdmin ? "/admin/dashboard" : "/dashboard", nextUrl)
+        );
       }
 
       return true;

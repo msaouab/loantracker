@@ -1,8 +1,19 @@
 import { request } from "@/lib/api-client";
+import type { DashboardStats } from "@/lib/dashboard";
 import type { AccountStatus } from "@/lib/users";
-import type { AdminCreateUserInput, AdminUserAction } from "@/lib/validations";
+import type {
+  AdminCreateUserInput,
+  AdminResetPasswordInput,
+  AdminUpdateUserProfileInput,
+  AdminUserAction,
+} from "@/lib/validations";
 
-export type { AdminCreateUserInput, AdminUserAction };
+export type {
+  AdminCreateUserInput,
+  AdminResetPasswordInput,
+  AdminUpdateUserProfileInput,
+  AdminUserAction,
+};
 
 export type AdminUser = {
   id: string;
@@ -24,6 +35,47 @@ export async function fetchAdminUsers(): Promise<AdminUser[]> {
     "Failed to load users"
   );
   return data.users;
+}
+
+export async function fetchAdminUser(
+  userId: string
+): Promise<{ user: AdminUser; stats: DashboardStats }> {
+  return request(
+    `/api/admin/users/${userId}`,
+    {},
+    "Failed to load user"
+  );
+}
+
+export async function updateAdminUserProfile(
+  userId: string,
+  input: AdminUpdateUserProfileInput
+): Promise<AdminUser> {
+  const data = await request<{ user: AdminUser }>(
+    `/api/admin/users/${userId}/profile`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    "Failed to update user"
+  );
+  return data.user;
+}
+
+export async function resetAdminUserPassword(
+  userId: string,
+  input: AdminResetPasswordInput
+): Promise<void> {
+  await request(
+    `/api/admin/users/${userId}/password`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    "Failed to reset password"
+  );
 }
 
 export async function createAdminUser(

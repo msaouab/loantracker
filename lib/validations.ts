@@ -68,6 +68,24 @@ export const adminCreateUserSchema = z.object({
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
 export type AdminUserAction = z.infer<typeof adminUserActionSchema>["action"];
 
+export const adminUpdateUserProfileSchema = z.object({
+  fullName: z.string().min(2, "Full name is required"),
+  email: z.string().email("Invalid email address"),
+});
+
+export const adminResetPasswordSchema = z
+  .object({
+    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type AdminUpdateUserProfileInput = z.infer<typeof adminUpdateUserProfileSchema>;
+export type AdminResetPasswordInput = z.infer<typeof adminResetPasswordSchema>;
+
 export const updateProfileSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
 });

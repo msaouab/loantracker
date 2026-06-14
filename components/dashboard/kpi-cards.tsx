@@ -13,11 +13,9 @@ type KpiStats = Pick<
   | "totalClients"
   | "totalLoanAmount"
   | "amountRecovered"
-  | "ifAllRecovered"
   | "outstanding"
   | "recoveryRate"
   | "activeCount"
-  | "recoveredCount"
   | "isAdminView"
 >;
 
@@ -28,9 +26,9 @@ const cardStyles = [
     iconBg: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   },
   {
-    icon: CircleDollarSign,
-    accent: "from-violet-500/15 to-violet-500/5",
-    iconBg: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    icon: Target,
+    accent: "from-amber-500/15 to-amber-500/5",
+    iconBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   },
   {
     icon: TrendingUp,
@@ -38,39 +36,39 @@ const cardStyles = [
     iconBg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   },
   {
-    icon: Target,
-    accent: "from-amber-500/15 to-amber-500/5",
-    iconBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    icon: CircleDollarSign,
+    accent: "from-violet-500/15 to-violet-500/5",
+    iconBg: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
   },
 ];
 
 export function KpiCards({ stats }: { stats: KpiStats }) {
-  const loanBreakdown = stats.isAdminView
-    ? `${stats.activeCount} active · ${stats.recoveredCount} repaid org-wide`
-    : `${stats.activeCount} active · ${stats.recoveredCount} repaid`;
+  const activeLoansLabel = stats.isAdminView
+    ? `${stats.activeCount} active loans org-wide`
+    : `${stats.activeCount} active loans`;
 
   const cards = [
     {
       title: "Clients",
       value: stats.totalClients.toString(),
       description: stats.isAdminView
-        ? "Unique borrowers across all managers"
-        : "Borrowers in your portfolio",
+        ? "Borrowers recorded across all managers"
+        : "Borrowers recorded in the app",
     },
     {
-      title: "Portfolio Value",
-      value: formatCurrency(stats.totalLoanAmount),
-      description: `Total principal · ${loanBreakdown}`,
+      title: "To Collect",
+      value: formatCurrency(stats.outstanding),
+      description: `Still owed by clients · ${activeLoansLabel}`,
     },
     {
       title: "Collected",
       value: formatCurrency(stats.amountRecovered),
-      description: `${stats.recoveryRate.toFixed(1)}% of portfolio recovered`,
+      description: `Payments received · ${stats.recoveryRate.toFixed(1)}% of full budget`,
     },
     {
-      title: "Full Recovery Target",
-      value: formatCurrency(stats.ifAllRecovered),
-      description: `${formatCurrency(stats.outstanding)} left to collect`,
+      title: "Full Budget",
+      value: formatCurrency(stats.totalLoanAmount),
+      description: `${formatCurrency(stats.amountRecovered)} collected + ${formatCurrency(stats.outstanding)} to collect`,
     },
   ];
 

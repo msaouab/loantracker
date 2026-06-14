@@ -16,6 +16,8 @@ export const ActivityActions = {
   USER_UNFROZEN: "user.unfrozen",
   USER_DELETED: "user.deleted",
   USER_CREATED: "user.created",
+  USER_UPDATED: "user.updated",
+  USER_PASSWORD_RESET: "user.password_reset",
 } as const;
 
 export type ActivityAction = (typeof ActivityActions)[keyof typeof ActivityActions];
@@ -38,6 +40,8 @@ export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   [ActivityActions.USER_UNFROZEN]: "User unfrozen",
   [ActivityActions.USER_DELETED]: "User deleted",
   [ActivityActions.USER_CREATED]: "User created",
+  [ActivityActions.USER_UPDATED]: "User updated",
+  [ActivityActions.USER_PASSWORD_RESET]: "User password reset",
 };
 
 export function isSecurityActivity(action: string) {
@@ -53,7 +57,12 @@ export type ActivityTabOption = {
 
 const ACTIVITY_TAB_CONFIG: Record<
   ActivityTab,
-  { label: string; emptyDescription: string; adminOnly?: boolean }
+  {
+    label: string;
+    emptyDescription: string;
+    adminOnly?: boolean;
+    managerOnly?: boolean;
+  }
 > = {
   all: {
     label: "All",
@@ -68,10 +77,12 @@ const ACTIVITY_TAB_CONFIG: Record<
     label: "Loans",
     emptyDescription:
       "Loan create, update, delete, restore, and purge events will appear here.",
+    managerOnly: true,
   },
   payments: {
     label: "Payments",
     emptyDescription: "Payment recorded, updated, and deleted events will appear here.",
+    managerOnly: true,
   },
   account: {
     label: "Account",
@@ -114,13 +125,20 @@ export function getActionsForTab(tab: ActivityTab): ActivityAction[] | undefined
         ActivityActions.USER_UNFROZEN,
         ActivityActions.USER_DELETED,
         ActivityActions.USER_CREATED,
+        ActivityActions.USER_UPDATED,
+        ActivityActions.USER_PASSWORD_RESET,
       ];
   }
 }
 
 export function getActivityTabs(admin = false): ActivityTabOption[] {
   return (Object.keys(ACTIVITY_TAB_CONFIG) as ActivityTab[])
-    .filter((tab) => !ACTIVITY_TAB_CONFIG[tab].adminOnly || admin)
+    .filter((tab) => {
+      const config = ACTIVITY_TAB_CONFIG[tab];
+      if (config.adminOnly && !admin) return false;
+      if (config.managerOnly && admin) return false;
+      return true;
+    })
     .map((tab) => ({
       id: tab,
       label: ACTIVITY_TAB_CONFIG[tab].label,

@@ -223,7 +223,9 @@ export function DeletedLoans() {
                         <TableCell>{formatCurrency(loan.totalAmount)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span>{formatCurrency(loan.amountPaid)}</span>
+                            <span className="font-medium text-success tabular-nums">
+                              {formatCurrency(loan.amountPaid)}
+                            </span>
                             {loan.paymentCount && loan.paymentCount > 0 ? (
                               <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                                 {loan.paymentCount}
@@ -231,7 +233,9 @@ export function DeletedLoans() {
                             ) : null}
                           </div>
                         </TableCell>
-                        <TableCell>{formatCurrency(loan.outstanding)}</TableCell>
+                        <TableCell className="font-medium text-destructive tabular-nums">
+                          {formatCurrency(loan.outstanding)}
+                        </TableCell>
                         <TableCell>
                           {format(new Date(loan.loanDate), "MMM d, yyyy")}
                         </TableCell>

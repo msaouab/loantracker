@@ -1,10 +1,16 @@
-import { NextResponse } from "next/server";
+import { apiOk } from "@/lib/api-response";
 import { withAdmin } from "@/lib/api-handler";
 import { parseOrThrow } from "@/lib/errors";
 import { ActivityActions } from "@/lib/activity-log";
 import { logActivityFromRequest } from "@/lib/activity-log-service";
+import { getDashboardStats } from "@/lib/dashboard";
 import { prisma } from "@/lib/db";
-import { deleteUser, serializeUser, updateUserStatus } from "@/lib/users-service";
+import {
+  deleteUser,
+  getManagerForAdmin,
+  serializeUser,
+  updateUserStatus,
+} from "@/lib/users-service";
 import { adminUserActionSchema } from "@/lib/validations";
 
 const adminActionLabels: Record<
@@ -25,6 +31,17 @@ const adminActionLabels: Record<
   },
 };
 
+export const GET = withAdmin<{ id: string }>(async (_req, _adminUserId, { params }) => {
+  const { id } = await params;
+  const user = await getManagerForAdmin(id);
+  const stats = await getDashboardStats(id);
+
+  return apiOk({
+    user: serializeUser(user),
+    stats,
+  });
+});
+
 export const PATCH = withAdmin<{ id: string }>(async (req, adminUserId, { params }) => {
   const { id } = await params;
   const { action } = parseOrThrow(adminUserActionSchema, await req.json());
@@ -39,7 +56,7 @@ export const PATCH = withAdmin<{ id: string }>(async (req, adminUserId, { params
     metadata: { email: updated.email },
   });
 
-  return NextResponse.json({ user: serializeUser(updated) });
+  return apiOk({ user: serializeUser(updated) });
 });
 
 export const DELETE = withAdmin<{ id: string }>(async (req, adminUserId, { params }) => {
@@ -60,5 +77,5 @@ export const DELETE = withAdmin<{ id: string }>(async (req, adminUserId, { param
     });
   }
 
-  return NextResponse.json({ success: true });
+  return apiOk({ success: true });
 });

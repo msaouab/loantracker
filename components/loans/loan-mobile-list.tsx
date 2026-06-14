@@ -104,7 +104,7 @@ export function LoanMobileCard({
         </div>
         <div>
           <dt className="text-muted-foreground">Paid</dt>
-          <dd className="mt-0.5 font-medium tabular-nums">
+          <dd className="mt-0.5 font-medium text-success tabular-nums">
             {formatCurrency(loan.amountPaid)}
             {loan.paymentCount > 0 ? (
               <span className="ml-1 text-xs text-muted-foreground">
@@ -115,7 +115,9 @@ export function LoanMobileCard({
         </div>
         <div>
           <dt className="text-muted-foreground">Due</dt>
-          <dd className="mt-0.5 font-medium tabular-nums">{formatCurrency(loan.outstanding)}</dd>
+          <dd className="mt-0.5 font-medium text-destructive tabular-nums">
+            {formatCurrency(loan.outstanding)}
+          </dd>
         </div>
       </dl>
 

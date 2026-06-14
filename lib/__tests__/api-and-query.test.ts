@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toErrorResponse } from "@/lib/error-response";
+import { apiOk } from "@/lib/api-response";
 import { buildLoanWhereSql } from "@/lib/loan-where-sql";
 import {
   AppError,
@@ -13,29 +14,36 @@ import {
   mergeTopClients,
   type SnapshotTotals,
 } from "@/lib/user-stats-helpers";
+import { getActivityTabs } from "@/lib/activity-log";
 
 async function readJson(response: Response) {
   return response.json() as Promise<{ error: unknown }>;
 }
 
-describe("toErrorResponse", () => {
-  it("maps validation errors to field error payloads", async () => {
+describe("toErrorResponse (unified envelope)", () => {
+  it("maps validation errors to a fields payload", async () => {
     const response = toErrorResponse(
       new ValidationError({ email: ["Invalid email"] })
     );
 
     expect(response.status).toBe(400);
     await expect(readJson(response)).resolves.toEqual({
-      error: { email: ["Invalid email"] },
+      success: false,
+      error: {
+        message: "Validation failed",
+        code: "validation_error",
+        fields: { email: ["Invalid email"] },
+      },
     });
   });
 
-  it("maps typed app errors to message payloads", async () => {
+  it("maps typed app errors to a message + code", async () => {
     const response = toErrorResponse(new UnauthorizedError());
 
     expect(response.status).toBe(401);
     await expect(readJson(response)).resolves.toEqual({
-      error: "Unauthorized",
+      success: false,
+      error: { message: "Unauthorized", code: "unauthorized" },
     });
   });
 
@@ -48,7 +56,21 @@ describe("toErrorResponse", () => {
     const response = toErrorResponse(new AppError("Bad gateway", 502));
 
     expect(response.status).toBe(502);
-    await expect(readJson(response)).resolves.toEqual({ error: "Bad gateway" });
+    await expect(readJson(response)).resolves.toEqual({
+      success: false,
+      error: { message: "Bad gateway", code: "error" },
+    });
+  });
+});
+
+describe("apiOk (unified envelope)", () => {
+  it("wraps payloads as { success: true, data }", async () => {
+    const response = apiOk({ loan: { id: "l1" } }, { status: 201 });
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      data: { loan: { id: "l1" } },
+    });
   });
 });
 
@@ -104,5 +126,23 @@ describe("purge snapshot dashboard flow", () => {
     expect(
       mergeTopClients([], purged.purgedClientTotals).map((row) => row.name)
     ).toEqual(["Sara", "Ali"]);
+  });
+});
+
+describe("getActivityTabs role scoping", () => {
+  it("shows loans/payments to managers but not the users tab", () => {
+    const ids = getActivityTabs(false).map((tab) => tab.id);
+    expect(ids).toContain("loans");
+    expect(ids).toContain("payments");
+    expect(ids).not.toContain("users");
+  });
+
+  it("shows the users tab to admins but hides loans/payments", () => {
+    const ids = getActivityTabs(true).map((tab) => tab.id);
+    expect(ids).toContain("users");
+    expect(ids).toContain("security");
+    expect(ids).toContain("account");
+    expect(ids).not.toContain("loans");
+    expect(ids).not.toContain("payments");
   });
 });

@@ -22,6 +22,7 @@
 
 # project specs (local only)
 /subject
+CODE_AUDIT.md
 
 # misc
 .DS_Store
@@ -44,3 +45,6 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Vendored Swagger UI assets (copied from swagger-ui-dist on install/build)
+/public/swagger/

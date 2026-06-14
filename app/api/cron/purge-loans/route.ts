@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { apiOk } from "@/lib/api-response";
+import { apiError } from "@/lib/error-response";
 import { ActivityActions } from "@/lib/activity-log";
 import {
   anonymizeStaleActivityPii,
@@ -30,7 +31,7 @@ type PurgeOutcome = {
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const tasks = [
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
 
   const hasFailures = outcomes.some((outcome) => outcome.status === "rejected");
 
-  return NextResponse.json(
+  return apiOk(
     {
       ...counts,
       outcomes,

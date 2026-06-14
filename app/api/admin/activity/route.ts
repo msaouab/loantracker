@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiOk } from "@/lib/api-response";
 import { withAdmin } from "@/lib/api-handler";
 import { listAllActivities } from "@/lib/activity-log-service";
 import { parseActivityCategory } from "@/lib/activity-query";
@@ -12,5 +12,5 @@ export const GET = withAdmin(async (req) => {
 
   const result = await listAllActivities({ page, pageSize, category });
 
-  return NextResponse.json(result);
+  return apiOk(result);
 });

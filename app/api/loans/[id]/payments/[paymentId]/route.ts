@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { withUser } from "@/lib/api-handler";
+import { apiOk } from "@/lib/api-response";
+import { withManager } from "@/lib/api-handler";
 import { parseOrThrow } from "@/lib/errors";
 import { ActivityActions } from "@/lib/activity-log";
 import { logActivityFromRequest } from "@/lib/activity-log-service";
@@ -13,7 +13,7 @@ import {
 } from "@/lib/loans-service";
 import { loanPaymentSchema } from "@/lib/validations";
 
-export const PUT = withUser<{ id: string; paymentId: string }>(
+export const PUT = withManager<{ id: string; paymentId: string }>(
   async (req, userId, { params }) => {
     const { id, paymentId } = await params;
     const input = parseOrThrow(loanPaymentSchema, await req.json());
@@ -33,7 +33,7 @@ export const PUT = withUser<{ id: string; paymentId: string }>(
       metadata: { paymentId },
     });
 
-    return NextResponse.json({
+    return apiOk({
       payment: serializePayment(payment),
       amountPaid,
       outstanding,
@@ -41,7 +41,7 @@ export const PUT = withUser<{ id: string; paymentId: string }>(
   }
 );
 
-export const DELETE = withUser<{ id: string; paymentId: string }>(
+export const DELETE = withManager<{ id: string; paymentId: string }>(
   async (req, userId, { params }) => {
     const { id, paymentId } = await params;
     const loan = await getOwnedLoanOrThrow(prisma, userId, id);
@@ -58,7 +58,7 @@ export const DELETE = withUser<{ id: string; paymentId: string }>(
       metadata: { paymentId },
     });
 
-    return NextResponse.json({
+    return apiOk({
       success: true,
       amountPaid,
       outstanding,
