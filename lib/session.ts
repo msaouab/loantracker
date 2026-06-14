@@ -2,10 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
-import {
-  getSessionCookieClearOptions,
-  getSessionCookieName,
-} from "@/lib/auth-cookie";
+import { getSessionCookieName } from "@/lib/auth-cookie";
 import { decodeSessionJwt } from "@/lib/session-jwt";
 import { prisma } from "@/lib/db";
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
@@ -83,19 +80,13 @@ export const getSession = cache(async (): Promise<Session | null> => {
   };
 });
 
-/** Drop a stale JWT so edge middleware stops treating the user as signed in. */
-export async function clearSessionCookie() {
-  const cookieStore = await cookies();
-  const name = getSessionCookieName();
-  if (!cookieStore.get(name)) {
-    return;
-  }
-  cookieStore.set(name, "", getSessionCookieClearOptions());
-}
-
-/** Redirect to login and clear any rejected session cookie to avoid auth redirect loops. */
-export async function redirectToLogin(): Promise<never> {
-  await clearSessionCookie();
+/**
+ * Redirect to login. Does NOT mutate cookies — Server Components can't call
+ * `cookies().set()` (Next throws). No loop results because the edge `authorized`
+ * callback no longer redirects `/auth/*`, so a server-rejected session lands on
+ * the login page and stays. `signOut()` handles real cookie clearing.
+ */
+export function redirectToLogin(): never {
   redirect("/auth/login");
 }
 
