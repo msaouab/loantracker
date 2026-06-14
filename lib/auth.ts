@@ -15,6 +15,7 @@ import { getClientInfo } from "@/lib/client-info";
 import { getAuthSecret } from "@/lib/auth-secret";
 import {
   getSessionCookieName,
+  shouldUseSecureCookies,
   REMEMBER_ME_MAX_AGE,
   SESSION_MAX_AGE,
 } from "@/lib/auth-cookie";
@@ -104,7 +105,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    // Edge-only gate for proxy (no DB access). Authoritative checks live in getSession().
+    // Edge-only optimistic gate (no DB). The ONLY redirect here is
+    // "not signed in → login page", which the server always agrees with.
+    //
+    // Loop-prevention invariant: the edge must NOT make any redirect the server
+    // could contradict. So NO role redirects and NO /auth redirects here — those
+    // depend on DB truth (isAdmin/isFrozen/sessionVersion) the edge can't see.
+    // All role/redirect enforcement lives server-side in getSession() +
+    // requireAdminOrRedirect()/requireManagerOrRedirect(), a single source of
+    // truth that cannot loop against itself.
     authorized({ auth: session, request: { nextUrl } }) {
       const isLoggedIn = !!session?.user;
       const isProtected =
@@ -117,30 +126,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (isProtected && !isLoggedIn) {
         return false;
       }
-
-      // Optimistic admin check from stale JWT — getSession() enforces on the server.
-      // /docs (API spec) is admin-only alongside /admin.
-      if (
-        isLoggedIn &&
-        (nextUrl.pathname.startsWith("/admin") ||
-          nextUrl.pathname.startsWith("/docs")) &&
-        !session?.user?.isAdmin
-      ) {
-        return Response.redirect(new URL("/dashboard", nextUrl));
-      }
-
-      if (
-        isLoggedIn &&
-        session?.user?.isAdmin &&
-        (nextUrl.pathname.startsWith("/loans") ||
-          nextUrl.pathname === "/dashboard")
-      ) {
-        return Response.redirect(new URL("/admin/dashboard", nextUrl));
-      }
-
-      // Do not redirect away from /auth/* here — stale JWTs pass this edge check
-      // while getSession() rejects them server-side, causing redirect loops.
-      // Login/home pages redirect after DB-validated getSession() instead.
 
       return true;
     },
@@ -170,9 +155,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure:
-          process.env.NODE_ENV === "production" ||
-          (process.env.NEXTAUTH_URL ?? "").startsWith("https://"),
+        secure: shouldUseSecureCookies(),
       },
     },
   },
