@@ -16,16 +16,42 @@ model User {
   isActivated           Boolean   @default(false)
   isFrozen              Boolean   @default(false)
   sessionVersion        Int       @default(0)
-  activationToken       String?
-  activationTokenExpiry DateTime?
-  resetToken            String?
-  resetTokenExpiry      DateTime?
   lastLoginAt           DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   loans                 Loan[]
+  activityLogs          ActivityLog[]
+  stats                 UserStats?
+  purgedClientStats     PurgedClientStat[]
 
   @@map("users")
+}
+
+model UserStats {
+  userId                String @id
+  purgedLoanCount       Int    @default(0)
+  purgedTotalAmount     Int    @default(0)
+  purgedAmountRecovered Int    @default(0)
+  purgedRecoveredCount  Int    @default(0)
+  purgedTrustedCount    Int    @default(0)
+  purgedNotTrustedCount Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_stats")
+}
+
+model PurgedClientStat {
+  userId      String
+  clientName  String
+  totalAmount Int    @default(0)
+  loanCount   Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, clientName])
+  @@index([userId])
+  @@map("purged_client_stats")
 }
 
 model Loan {
@@ -40,12 +66,15 @@ model Loan {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
+  recoveredAt DateTime?
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments LoanPayment[]
 
   @@index([userId])
   @@index([deletedAt])
+  @@index([userId, deletedAt])
+  @@index([recoveredAt])
   @@map("loans")
 }
 
@@ -63,4 +92,25 @@ model LoanPayment {
   @@index([loanId])
   @@index([paidAt])
   @@map("loan_payments")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  entityType String?
+  entityId   String?
+  summary    String
+  ipAddress  String?
+  userAgent  String?
+  browser    String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@map("activity_logs")
 }

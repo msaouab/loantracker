@@ -8,13 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoanPaymentHistory } from "@/components/loans/loan-payment-history";
 import { TrustBadge } from "@/components/loans/trust-badge";
-import { formatCurrency } from "@/lib/loans";
+import { formatCurrency, formatRecoveredRetention } from "@/lib/loans";
 import type { Loan } from "@/lib/loans-client";
-import {
-  LOAN_SORT_FIELDS,
-  type LoanSortField,
-  type LoanSortOrder,
-} from "@/lib/loan-sort";
+import type { LoanSortField, LoanSortOrder } from "@/lib/loan-sort-types";
+import { LOAN_SORT_FIELDS } from "@/lib/loan-sort-types";
 
 const SORT_LABELS: Record<LoanSortField, string> = {
   clientName: "Client",
@@ -74,10 +71,12 @@ export function LoanMobileCard({
   loan,
   onDelete,
   onPaymentsChanged,
+  showRecoveredAt = false,
 }: {
   loan: Loan;
   onDelete: (loan: Loan) => void;
   onPaymentsChanged?: () => void;
+  showRecoveredAt?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -119,6 +118,13 @@ export function LoanMobileCard({
           <dd className="mt-0.5 font-medium tabular-nums">{formatCurrency(loan.outstanding)}</dd>
         </div>
       </dl>
+
+      {showRecoveredAt ? (
+        <p className="text-sm text-muted-foreground">
+          {formatRecoveredRetention(loan.recoveredAt ?? null) ??
+            "Recovery date unavailable"}
+        </p>
+      ) : null}
 
       <Button
         type="button"

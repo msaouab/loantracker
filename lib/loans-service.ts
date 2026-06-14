@@ -1,10 +1,34 @@
 import type { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { NotFoundError, ValidationError } from "@/lib/errors";
-import { formatCurrency, getOutstanding } from "@/lib/loans";
+import {
+  formatCurrency,
+  getOutstanding,
+  RECOVERED_LOAN_RETENTION_DAYS,
+} from "@/lib/loans";
+import { recordPurgedRecoveredLoans } from "@/lib/user-stats-service";
 import type { CreateLoanInput, LoanPaymentInput, UpdateLoanInput } from "@/lib/validations";
 
 type Db = Prisma.TransactionClient;
+
+export const DELETED_LOAN_RETENTION_DAYS = 30;
+export { RECOVERED_LOAN_RETENTION_DAYS };
+
+function deletedRetentionCutoff() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - DELETED_LOAN_RETENTION_DAYS);
+  return cutoff;
+}
+
+function recoveredCutoff() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - RECOVERED_LOAN_RETENTION_DAYS);
+  return cutoff;
+}
+
+import { computeRecoveredAt } from "@/lib/loan-recovery";
+
+export { computeRecoveredAt };
 
 export type LoanPaymentRecord = {
   id: string;
@@ -42,9 +66,16 @@ export async function listPayments(db: Db, loanId: string) {
 }
 
 async function syncAmountPaid(db: Db, loanId: string): Promise<number> {
-  const agg = await db.loanPayment.aggregate({ where: { loanId }, _sum: { amount: true } });
+  const [agg, loan] = await Promise.all([
+    db.loanPayment.aggregate({ where: { loanId }, _sum: { amount: true } }),
+    db.loan.findUniqueOrThrow({
+      where: { id: loanId },
+      select: { totalAmount: true, recoveredAt: true },
+    }),
+  ]);
   const amountPaid = agg._sum.amount ?? 0;
-  await db.loan.update({ where: { id: loanId }, data: { amountPaid } });
+  const recoveredAt = computeRecoveredAt(amountPaid, loan.totalAmount, loan.recoveredAt);
+  await db.loan.update({ where: { id: loanId }, data: { amountPaid, recoveredAt } });
   return amountPaid;
 }
 
@@ -74,7 +105,11 @@ export async function createLoan(userId: string, input: CreateLoanInput) {
         },
       });
       const amountPaid = await syncAmountPaid(tx, loan.id);
-      return { ...loan, amountPaid };
+      return {
+        ...loan,
+        amountPaid,
+        recoveredAt: computeRecoveredAt(amountPaid, loan.totalAmount, loan.recoveredAt),
+      };
     }
     return loan;
   });
@@ -88,11 +123,18 @@ export async function updateLoan(userId: string, loanId: string, input: UpdateLo
         totalAmount: [`Total cannot be below amount already paid (${formatCurrency(existing.amountPaid)})`],
       });
     }
+    const recoveredAt = computeRecoveredAt(
+      existing.amountPaid,
+      input.totalAmount,
+      existing.recoveredAt
+    );
+
     return tx.loan.update({
       where: { id: loanId },
       data: {
         clientName: input.clientName,
         totalAmount: input.totalAmount,
+        recoveredAt,
         loanDate: input.loanDate ?? existing.loanDate,
         description: input.description?.trim() || null,
         clientTrust: input.clientTrust,
@@ -104,6 +146,58 @@ export async function updateLoan(userId: string, loanId: string, input: UpdateLo
 export async function softDeleteLoan(userId: string, loanId: string) {
   await getOwnedLoanOrThrow(prisma, userId, loanId);
   await prisma.loan.update({ where: { id: loanId }, data: { deletedAt: new Date() } });
+}
+
+export async function listDeletedLoans(userId: string) {
+  return prisma.loan.findMany({
+    where: { userId, deletedAt: { gte: deletedRetentionCutoff() } },
+    orderBy: { deletedAt: "desc" },
+    include: { _count: { select: { payments: true } } },
+  });
+}
+
+export async function restoreLoan(userId: string, loanId: string) {
+  const loan = await prisma.loan.findFirst({
+    where: { id: loanId, userId, deletedAt: { gte: deletedRetentionCutoff() } },
+  });
+  if (!loan) throw new NotFoundError("Deleted loan not found");
+  return prisma.loan.update({ where: { id: loanId }, data: { deletedAt: null } });
+}
+
+export async function purgeExpiredDeletedLoans() {
+  const { count } = await prisma.loan.deleteMany({
+    where: { deletedAt: { lte: deletedRetentionCutoff() } },
+  });
+  return count;
+}
+
+export async function purgeExpiredRecoveredLoans() {
+  const toPurge = await prisma.loan.findMany({
+    where: {
+      recoveredAt: { lte: recoveredCutoff() },
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      userId: true,
+      clientName: true,
+      totalAmount: true,
+      clientTrust: true,
+    },
+  });
+
+  if (toPurge.length === 0) {
+    return 0;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await recordPurgedRecoveredLoans(tx, toPurge);
+    await tx.loan.deleteMany({
+      where: { id: { in: toPurge.map((loan) => loan.id) } },
+    });
+  });
+
+  return toPurge.length;
 }
 
 export async function recordPayment(userId: string, loanId: string, input: LoanPaymentInput) {

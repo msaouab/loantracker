@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { withUser } from "@/lib/api-handler";
 import { parseOrThrow } from "@/lib/errors";
+import { ActivityActions } from "@/lib/activity-log";
+import { logActivityFromRequest } from "@/lib/activity-log-service";
 import { prisma } from "@/lib/db";
-import { getOutstanding } from "@/lib/loans";
+import { formatCurrency, getOutstanding } from "@/lib/loans";
 import { getOwnedLoanOrThrow, listPayments, recordPayment, serializePayment } from "@/lib/loans-service";
 import { loanPaymentSchema } from "@/lib/validations";
 
@@ -21,7 +23,16 @@ export const GET = withUser<{ id: string }>(async (_req, userId, { params }) => 
 export const POST = withUser<{ id: string }>(async (req, userId, { params }) => {
   const { id } = await params;
   const input = parseOrThrow(loanPaymentSchema, await req.json());
+  const loan = await getOwnedLoanOrThrow(prisma, userId, id);
   const { payment, amountPaid, outstanding } = await recordPayment(userId, id, input);
+
+  await logActivityFromRequest(userId, req, {
+    action: ActivityActions.PAYMENT_ADDED,
+    summary: `Recorded ${formatCurrency(payment.amount)} payment for ${loan.clientName}`,
+    entityType: "loan",
+    entityId: id,
+    metadata: { paymentId: payment.id },
+  });
 
   return NextResponse.json(
     {

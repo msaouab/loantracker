@@ -72,34 +72,32 @@ export function LoanPaymentHistory({
   }, [loanId]);
 
   useEffect(() => {
-    if (hasInitialData) return;
+    if (hasInitialData) {
+      return;
+    }
 
     let cancelled = false;
 
-    async function run() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const data = await fetchLoanPayments(loanId);
+    void fetchLoanPayments(loanId)
+      .then((data) => {
+        if (cancelled) return;
+        setPayments(data.payments);
+        setOutstanding(data.outstanding);
+        setError(null);
+      })
+      .catch((loadError: unknown) => {
+        if (cancelled) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load payment history"
+        );
+      })
+      .finally(() => {
         if (!cancelled) {
-          setPayments(data.payments);
-          setOutstanding(data.outstanding);
+          setLoading(false);
         }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Failed to load payment history"
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
+      });
 
     return () => {
       cancelled = true;

@@ -80,8 +80,8 @@ export function DeleteLoanDialog({
           <AlertDialogTitle>Delete loan record?</AlertDialogTitle>
           <AlertDialogDescription>
             {clientName
-              ? `This will permanently remove the loan for ${clientName}. This action cannot be undone.`
-              : "This will permanently remove this loan record. This action cannot be undone."}
+              ? `This loan for ${clientName} will be moved to Deleted loans in Settings. Deleted loans are kept for 30 days, then permanently removed. You can restore it during that window.`
+              : "This loan will be moved to Deleted loans in Settings. Deleted loans are kept for 30 days, then permanently removed. You can restore it during that window."}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

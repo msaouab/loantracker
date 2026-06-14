@@ -31,11 +31,14 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <head>
-        <script
-          dangerouslySetInnerHTML={{ __html: getThemeInitScript() }}
+        <template
+          dangerouslySetInnerHTML={{
+            __html: `<script id="theme-init">${getThemeInitScript()}</script>`,
+          }}
         />
       </head>
       <body className="min-h-full flex flex-col font-sans">

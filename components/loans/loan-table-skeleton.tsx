@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { LoanSortField, LoanSortOrder } from "@/lib/loan-sort";
+import type { LoanSortField, LoanSortOrder } from "@/lib/loan-sort-types";
 
 const SKELETON_ROWS = 10;
 
@@ -64,7 +64,7 @@ function SortableTableHead({
   );
 }
 
-export function LoanTableSkeleton() {
+export function LoanTableSkeleton({ showRecoveredAt = false }: { showRecoveredAt?: boolean }) {
   return (
     <>
       {Array.from({ length: SKELETON_ROWS }).map((_, index) => (
@@ -90,6 +90,11 @@ export function LoanTableSkeleton() {
           <TableCell>
             <Skeleton className="h-5 w-10 rounded-md" />
           </TableCell>
+          {showRecoveredAt ? (
+            <TableCell>
+              <Skeleton className="h-4 w-40" />
+            </TableCell>
+          ) : null}
           <TableCell className="text-right">
             <div className="flex justify-end gap-2">
               <Skeleton className="h-8 w-8 rounded-lg" />
@@ -107,11 +112,13 @@ export function LoanTableShell({
   sortBy,
   sortOrder,
   onSort,
+  showRecoveredAt = false,
 }: {
   children: React.ReactNode;
   sortBy: LoanSortField;
   sortOrder: LoanSortOrder;
   onSort: (field: LoanSortField) => void;
+  showRecoveredAt?: boolean;
 }) {
   return (
     <div className="surface-card overflow-hidden">
@@ -131,6 +138,9 @@ export function LoanTableShell({
                 className={column.className}
               />
             ))}
+            {showRecoveredAt ? (
+              <TableHead className="text-muted-foreground">Retention</TableHead>
+            ) : null}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>

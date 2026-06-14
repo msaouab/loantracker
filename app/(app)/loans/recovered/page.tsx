@@ -5,7 +5,7 @@ export default function RecoveredLoansPage() {
     <LoanTable
       status="completed"
       title="Recovered Loans"
-      emptyMessage="No fully recovered loans yet."
+      emptyMessage="No fully recovered loans yet. Once paid in full, records stay here for 30 days before being permanently removed."
     />
   );
 }

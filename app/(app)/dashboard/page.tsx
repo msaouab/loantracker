@@ -1,35 +1,45 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { DashboardCharts } from "@/components/dashboard/charts";
+import { DashboardRefreshButton } from "@/components/dashboard/dashboard-refresh-button";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { getDashboardStats } from "@/lib/dashboard";
-import { requireUserId } from "@/lib/session";
+import { getAdminDashboardStats, getDashboardStats } from "@/lib/dashboard";
+import { getSession } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  const userId = await requireUserId();
-  const stats = await getDashboardStats(userId);
+  const session = await getSession();
+  if (!session?.user?.id) {
+    redirect("/auth/login");
+  }
+
+  const isAdminView = session.user.isAdmin;
+  const stats = isAdminView
+    ? await getAdminDashboardStats()
+    : await getDashboardStats(session.user.id);
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Dashboard"
-        description={`Overview of your loan portfolio. Last updated ${format(new Date(stats.updatedAt), "MMM d, yyyy h:mm a")}.`}
+        title={isAdminView ? "Organization dashboard" : "Dashboard"}
+        description={
+          isAdminView
+            ? `Portfolio-wide overview across ${stats.activeUserCount ?? 0} active manager${stats.activeUserCount === 1 ? "" : "s"}. Last updated ${format(new Date(stats.updatedAt), "MMM d, yyyy h:mm a")}.`
+            : `Overview of your loan portfolio. Last updated ${format(new Date(stats.updatedAt), "MMM d, yyyy h:mm a")}.`
+        }
       >
-        <PageHeaderAction
-          href="/dashboard"
-          label="Refresh"
-          icon={RefreshCw}
-          variant="outline"
-        />
-        <PageHeaderAction
-          href="/loans/new"
-          label="Add New Loan"
-          icon={Plus}
-          className="shadow-sm shadow-primary/20"
-        />
+        <DashboardRefreshButton />
+        {!isAdminView ? (
+          <PageHeaderAction
+            href="/loans/new"
+            label="Add New Loan"
+            icon={Plus}
+            className="shadow-sm shadow-primary/20"
+          />
+        ) : null}
       </PageHeader>
 
       <KpiCards stats={stats} />
@@ -43,9 +53,16 @@ export default async function DashboardPage() {
         />
       </section>
 
-      <Button variant="outline" asChild>
-        <Link href="/loans">View All Loans</Link>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {isAdminView ? (
+          <Button variant="outline" asChild>
+            <Link href="/admin/users">Manage users</Link>
+          </Button>
+        ) : null}
+        <Button variant="outline" asChild>
+          <Link href="/loans">View all loans</Link>
+        </Button>
+      </div>
     </div>
   );
 }

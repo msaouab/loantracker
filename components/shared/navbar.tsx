@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { CircleCheck, Landmark, LayoutDashboard, LogOut, Receipt, ShieldCheck } from "lucide-react";
+import {
+  CircleCheck,
+  History,
+  Landmark,
+  LayoutDashboard,
+  LogOut,
+  Receipt,
+  Settings,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,11 +30,10 @@ const navItems = [
   { href: "/loans/recovered", label: "Recovered", icon: CircleCheck },
 ];
 
-const adminNavItem = {
-  href: "/admin/users",
-  label: "Users",
-  icon: ShieldCheck,
-};
+const adminNavItems = [
+  { href: "/admin/users", label: "Users", icon: ShieldCheck },
+  { href: "/admin/activity", label: "Activity", icon: History },
+];
 
 function isItemActive(pathname: string, href: string) {
   if (href === "/loans") {
@@ -45,7 +53,6 @@ export function Navbar({
   isAdmin?: boolean;
 }) {
   const pathname = usePathname();
-  const AdminIcon = adminNavItem.icon;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
@@ -80,20 +87,26 @@ export function Navbar({
                 </Link>
               );
             })}
-            {isAdmin ? (
-              <Link
-                href={adminNavItem.href}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all sm:px-3",
-                  isItemActive(pathname, adminNavItem.href)
-                    ? "bg-background text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <AdminIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">{adminNavItem.label}</span>
-              </Link>
-            ) : null}
+            {isAdmin
+              ? adminNavItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all sm:px-3",
+                        isItemActive(pathname, item.href)
+                          ? "bg-background text-primary shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">{item.label}</span>
+                    </Link>
+                  );
+                })
+              : null}
           </nav>
         </div>
 
@@ -110,8 +123,14 @@ export function Navbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
+              variant="destructive"
               onClick={() => signOut({ callbackUrl: "/auth/login" })}
             >
               <LogOut className="mr-2 h-4 w-4" />

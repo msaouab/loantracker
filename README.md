@@ -60,6 +60,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `ADMIN_EMAIL` | Admin account email (seed script) |
 | `ADMIN_PASSWORD` | Admin account password (seed script) |
 | `ADMIN_NAME` | Admin display name (seed script) |
+| `CRON_SECRET` | Bearer secret for scheduled cron routes (e.g. purge deleted loans). Required in production on Vercel; route returns 401 until set. |
 
 Never commit `.env` — it contains secrets. Use `.env.example` as a template.
 
@@ -76,3 +77,5 @@ Never commit `.env` — it contains secrets. Use `.env.example` as a template.
 ## Deployment
 
 Deploy on [Vercel](https://vercel.com) with a PostgreSQL provider such as Neon. Set all environment variables in your deployment settings and run migrations against the production database before going live.
+
+Set `CRON_SECRET` in Vercel to enable the daily purge of expired loans (`/api/cron/purge-loans` at 03:00 UTC): soft-deleted loans and fully recovered loans are permanently removed after 30 days. Vercel sends `Authorization: Bearer $CRON_SECRET` automatically. Off Vercel, call the same route from any scheduler with that header.

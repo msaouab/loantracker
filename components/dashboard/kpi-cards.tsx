@@ -5,18 +5,21 @@ import {
   Users,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/loans";
+import type { DashboardStats } from "@/lib/dashboard";
 import { cn } from "@/lib/utils";
 
-type DashboardStats = {
-  totalClients: number;
-  totalLoanAmount: number;
-  amountRecovered: number;
-  ifAllRecovered: number;
-  outstanding: number;
-  recoveryRate: number;
-  activeCount: number;
-  recoveredCount: number;
-};
+type KpiStats = Pick<
+  DashboardStats,
+  | "totalClients"
+  | "totalLoanAmount"
+  | "amountRecovered"
+  | "ifAllRecovered"
+  | "outstanding"
+  | "recoveryRate"
+  | "activeCount"
+  | "recoveredCount"
+  | "isAdminView"
+>;
 
 const cardStyles = [
   {
@@ -41,27 +44,33 @@ const cardStyles = [
   },
 ];
 
-export function KpiCards({ stats }: { stats: DashboardStats }) {
+export function KpiCards({ stats }: { stats: KpiStats }) {
+  const loanBreakdown = stats.isAdminView
+    ? `${stats.activeCount} active · ${stats.recoveredCount} repaid org-wide`
+    : `${stats.activeCount} active · ${stats.recoveredCount} repaid`;
+
   const cards = [
     {
-      title: "Total Clients",
+      title: "Clients",
       value: stats.totalClients.toString(),
-      description: "Unique clients with loans",
+      description: stats.isAdminView
+        ? "Unique borrowers across all managers"
+        : "Borrowers in your portfolio",
     },
     {
-      title: "Total Loan Amount",
+      title: "Portfolio Value",
       value: formatCurrency(stats.totalLoanAmount),
-      description: `${stats.activeCount} active · ${stats.recoveredCount} recovered`,
+      description: `Total principal · ${loanBreakdown}`,
     },
     {
-      title: "Amount Recovered",
+      title: "Collected",
       value: formatCurrency(stats.amountRecovered),
-      description: `${stats.recoveryRate.toFixed(1)}% recovery rate`,
+      description: `${stats.recoveryRate.toFixed(1)}% of portfolio recovered`,
     },
     {
-      title: "If All Recovered",
+      title: "Full Recovery Target",
       value: formatCurrency(stats.ifAllRecovered),
-      description: `${formatCurrency(stats.outstanding)} still outstanding`,
+      description: `${formatCurrency(stats.outstanding)} left to collect`,
     },
   ];
 

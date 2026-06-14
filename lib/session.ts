@@ -1,31 +1,21 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getToken } from "next-auth/jwt";
 import type { Session } from "next-auth";
-import { getAuthSecret } from "@/lib/auth-secret";
 import { getSessionCookieName } from "@/lib/auth-cookie";
+import { decodeSessionJwt } from "@/lib/session-jwt";
 import { prisma } from "@/lib/db";
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
 
 async function readSessionToken() {
-  const cookieName = getSessionCookieName();
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(cookieName);
+  const sessionCookie = cookieStore.get(getSessionCookieName());
 
   if (!sessionCookie?.value) {
     return null;
   }
 
-  return getToken({
-    req: {
-      headers: {
-        cookie: `${cookieName}=${sessionCookie.value}`,
-      },
-    },
-    secret: getAuthSecret(),
-    salt: cookieName,
-  });
+  return decodeSessionJwt(sessionCookie.value);
 }
 
 const sessionUserSelect = {
@@ -40,9 +30,14 @@ const sessionUserSelect = {
 
 /**
  * Authoritative session reader for RSC and API routes.
- * Re-validates the JWT bearer against the database once per request (React cache).
- * Returns null when the token is invalid, the user is gone, deactivated, frozen,
- * or their sessionVersion no longer matches (global revocation).
+ *
+ * Session architecture:
+ * - Edge/proxy uses `auth()` from Auth.js for lightweight route gating.
+ * - Server routes and RSC use `decodeSessionJwt()` via this module, with DB
+ *   re-validation on every request (React `cache` dedupes within a request).
+ *
+ * Both paths must stay aligned on cookie name, secret, and JWT claims — see
+ * `lib/session-jwt.ts` when upgrading next-auth.
  */
 export const getSession = cache(async (): Promise<Session | null> => {
   const token = await readSessionToken();

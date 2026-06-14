@@ -6,6 +6,12 @@ import {
   AccountFrozenError,
   authenticateUser,
 } from "@/lib/credentials";
+import { ActivityActions } from "@/lib/activity-log";
+import {
+  buildAuthSummary,
+  logActivitySafe,
+} from "@/lib/activity-log-service";
+import { getClientInfo } from "@/lib/client-info";
 import { getAuthSecret } from "@/lib/auth-secret";
 import {
   getSessionCookieName,
@@ -33,7 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
         rememberMe: { label: "Remember Me", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -41,12 +47,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = credentials.email as string;
         const password = credentials.password as string;
         const rememberMe = parseRememberMe(credentials.rememberMe);
+        const clientInfo = getClientInfo(request);
 
         try {
           const user = await authenticateUser(email, password);
           if (!user) {
             return null;
           }
+
+          await logActivitySafe({
+            userId: user.id,
+            action: ActivityActions.AUTH_LOGIN,
+            summary: buildAuthSummary(ActivityActions.AUTH_LOGIN, clientInfo),
+            entityType: "session",
+            clientInfo,
+          });
 
           return {
             ...user,
@@ -96,7 +111,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const isProtected =
         nextUrl.pathname.startsWith("/dashboard") ||
         nextUrl.pathname.startsWith("/loans") ||
-        nextUrl.pathname.startsWith("/admin");
+        nextUrl.pathname.startsWith("/admin") ||
+        nextUrl.pathname.startsWith("/settings");
 
       if (isProtected && !isLoggedIn) {
         return false;

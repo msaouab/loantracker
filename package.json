@@ -7,11 +7,11 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "db:seed": "prisma db seed",
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.4.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@radix-ui/react-checkbox": "^1.3.4",
@@ -32,7 +32,6 @@
     "react": "19.2.4",
     "react-day-picker": "^10.0.1",
     "react-dom": "19.2.4",
-    "react-hook-form": "^7.79.0",
     "recharts": "^3.8.1",
     "shadcn": "^4.11.0",
     "sonner": "^2.0.7",
@@ -52,6 +51,7 @@
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.5",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

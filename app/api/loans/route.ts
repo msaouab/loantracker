@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { withUser } from "@/lib/api-handler";
 import { parseOrThrow } from "@/lib/errors";
+import { ActivityActions } from "@/lib/activity-log";
+import { logActivityFromRequest } from "@/lib/activity-log-service";
 import { prisma } from "@/lib/db";
-import { serializeLoan } from "@/lib/loans";
+import { formatCurrency, serializeLoan } from "@/lib/loans";
 import { createLoan } from "@/lib/loans-service";
 import { getLoanDateWhere, getLoanSearchWhere } from "@/lib/loan-search";
 import { getLoanStatusWhere, parseLoanStatus } from "@/lib/loan-status";
-import { findSortedLoans, parseLoanSort } from "@/lib/loan-sort";
+import { findSortedLoans } from "@/lib/loan-sort";
+import { parseLoanSort } from "@/lib/loan-sort-types";
 import { parseLoanPageSize } from "@/lib/loan-list";
 import { createLoanSchema } from "@/lib/validations";
 
@@ -59,6 +62,17 @@ export const GET = withUser(async (req, userId) => {
 export const POST = withUser(async (req, userId) => {
   const input = parseOrThrow(createLoanSchema, await req.json());
   const loan = await createLoan(userId, input);
+
+  await logActivityFromRequest(userId, req, {
+    action: ActivityActions.LOAN_CREATED,
+    summary: `Created loan for ${loan.clientName} (${formatCurrency(loan.totalAmount)})`,
+    entityType: "loan",
+    entityId: loan.id,
+    metadata: {
+      clientName: loan.clientName,
+      totalAmount: loan.totalAmount,
+    },
+  });
 
   return NextResponse.json(
     {

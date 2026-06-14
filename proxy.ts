@@ -4,5 +4,11 @@ import { auth } from "@/lib/auth";
 export const proxy = auth;
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/loans/:path*", "/admin/:path*", "/auth/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/loans/:path*",
+    "/admin/:path*",
+    "/settings/:path*",
+    "/auth/:path*",
+  ],
 };

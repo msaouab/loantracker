@@ -10,7 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
-export function LoginForm({ registered = false }: { registered?: boolean }) {
+export function LoginForm({
+  registered = false,
+  passwordChanged = false,
+}: {
+  registered?: boolean;
+  passwordChanged?: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +61,11 @@ export function LoginForm({ registered = false }: { registered?: boolean }) {
         <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
           Account created. Please wait for an admin to approve your account before
           signing in.
+        </p>
+      ) : null}
+      {passwordChanged ? (
+        <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+          Your password was updated. Sign in with your new password.
         </p>
       ) : null}
       {error ? (

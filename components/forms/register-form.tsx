@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import { ApiRequestError } from "@/lib/api-client";
+import { registerUser } from "@/lib/auth-client";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -21,32 +23,26 @@ export function RegisterForm() {
     setFieldErrors({});
 
     const formData = new FormData(event.currentTarget);
-    const payload = {
-      fullName: formData.get("fullName"),
-      email: formData.get("email"),
-      password: formData.get("password"),
-      confirmPassword: formData.get("confirmPassword"),
-    };
 
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-    setLoading(false);
-
-    if (!response.ok) {
-      if (data.error && typeof data.error === "object") {
-        setFieldErrors(data.error);
+    try {
+      await registerUser({
+        fullName: String(formData.get("fullName") ?? ""),
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+        confirmPassword: String(formData.get("confirmPassword") ?? ""),
+      });
+      router.push("/auth/login?registered=true");
+    } catch (submitError) {
+      if (submitError instanceof ApiRequestError && submitError.fieldErrors) {
+        setFieldErrors(submitError.fieldErrors);
       } else {
-        setError(data.error ?? "Registration failed");
+        setError(
+          submitError instanceof Error ? submitError.message : "Registration failed"
+        );
       }
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/auth/login?registered=true");
   }
 
   return (

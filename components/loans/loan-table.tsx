@@ -19,9 +19,9 @@ import {
   TableCell,
   TableRow,
 } from "@/components/ui/table";
-import { formatCurrency } from "@/lib/loans";
+import { formatCurrency, formatRecoveredRetention } from "@/lib/loans";
 import type { LoanStatus } from "@/lib/loan-status";
-import { DEFAULT_LOAN_SORT, type LoanSortField } from "@/lib/loan-sort";
+import { DEFAULT_LOAN_SORT, type LoanSortField } from "@/lib/loan-sort-types";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { LoanEmptyState } from "@/components/loans/loan-empty-state";
 import {
@@ -183,7 +183,9 @@ export function LoanTable({
             ? "Loading portfolio..."
             : error
               ? "Unable to load portfolio"
-              : `${total} record${total === 1 ? "" : "s"}${hasActiveFilters ? " matching filters" : ""}`
+              : status === "completed"
+                ? `${total} record${total === 1 ? "" : "s"} · removed 30 days after full payment${hasActiveFilters ? " matching filters" : ""}`
+                : `${total} record${total === 1 ? "" : "s"}${hasActiveFilters ? " matching filters" : ""}`
         }
         toolbar={
           <div className={PAGE_HEADER_TOOLBAR_CLASS}>
@@ -254,13 +256,23 @@ export function LoanTable({
 
       <div className="hidden md:block">
         {loading ? (
-          <LoanTableShell sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort}>
-            <LoanTableSkeleton />
+          <LoanTableShell
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            showRecoveredAt={status === "completed"}
+          >
+            <LoanTableSkeleton showRecoveredAt={status === "completed"} />
           </LoanTableShell>
         ) : loans.length === 0 ? (
           emptyState
         ) : (
-          <LoanTableShell sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort}>
+          <LoanTableShell
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            showRecoveredAt={status === "completed"}
+          >
               {loans.map((loan) => {
                 const isExpanded = expandedLoanIds.has(loan.id);
 
@@ -308,6 +320,11 @@ export function LoanTable({
                       <TableCell>
                         <TrustBadge trusted={loan.clientTrust} />
                       </TableCell>
+                      {status === "completed" ? (
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatRecoveredRetention(loan.recoveredAt ?? null) ?? "—"}
+                        </TableCell>
+                      ) : null}
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="icon" asChild>
@@ -328,7 +345,7 @@ export function LoanTable({
                     </TableRow>
                     {isExpanded ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="bg-muted/15 px-6 py-4">
+                        <TableCell colSpan={status === "completed" ? 9 : 8} className="bg-muted/15 px-6 py-4">
                           <LoanPaymentHistory
                             loanId={loan.id}
                             clientName={loan.clientName}
@@ -362,6 +379,7 @@ export function LoanTable({
               loan={loan}
               onDelete={requestDelete}
               onPaymentsChanged={loadLoans}
+              showRecoveredAt={status === "completed"}
             />
           ))
         )}

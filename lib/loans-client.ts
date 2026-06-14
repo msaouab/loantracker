@@ -1,6 +1,6 @@
 import { request } from "@/lib/api-client";
 import type { LoanPayment } from "@/lib/loan-payments-client";
-import type { LoanSortField, LoanSortOrder } from "@/lib/loan-sort";
+import type { LoanSortField, LoanSortOrder } from "@/lib/loan-sort-types";
 import type { LoanStatus } from "@/lib/loan-status";
 
 export type CreateLoanPayload = {
@@ -25,6 +25,8 @@ export type LoanRecord = {
   clientTrust: boolean;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
+  recoveredAt?: string | null;
   paymentCount?: number;
 };
 
@@ -45,6 +47,7 @@ export type LoanListItem = {
   loanDate: string;
   clientTrust: boolean;
   paymentCount: number;
+  recoveredAt?: string | null;
 };
 
 export type Loan = LoanListItem;
@@ -126,5 +129,21 @@ export async function deleteLoan(id: string) {
     `/api/loans/${id}`,
     { method: "DELETE" },
     "Failed to delete loan"
+  );
+}
+
+export async function fetchDeletedLoans() {
+  return request<{ loans: LoanRecord[] }>(
+    "/api/loans/deleted",
+    {},
+    "Failed to load deleted loans"
+  );
+}
+
+export async function restoreLoan(id: string) {
+  return request<{ loan: LoanRecord }>(
+    `/api/loans/${id}/restore`,
+    { method: "POST" },
+    "Failed to restore loan"
   );
 }
