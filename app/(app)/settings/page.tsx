@@ -1,14 +1,13 @@
-import { redirect } from "next/navigation";
 import { ActivityFeed } from "@/components/activity/activity-feed";
 import { SettingsForm } from "@/components/forms/settings-form";
 import { DeletedLoans } from "@/components/settings/deleted-loans";
 import { PageHeader } from "@/components/shared/page-header";
-import { getSession } from "@/lib/session";
+import { getSession, redirectToLogin } from "@/lib/session";
 
 export default async function SettingsPage() {
   const session = await getSession();
   if (!session) {
-    redirect("/auth/login");
+    return redirectToLogin();
   }
 
   return (

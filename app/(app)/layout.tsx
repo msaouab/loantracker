@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import { Navbar } from "@/components/shared/navbar";
-import { getSession } from "@/lib/session";
+import { getSession, redirectToLogin } from "@/lib/session";
 
 export default async function AppLayout({
   children,
@@ -9,7 +8,7 @@ export default async function AppLayout({
 }) {
   const session = await getSession();
   if (!session) {
-    redirect("/auth/login");
+    return redirectToLogin();
   }
 
   return (

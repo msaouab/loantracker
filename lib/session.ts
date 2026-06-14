@@ -2,7 +2,10 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
-import { getSessionCookieName } from "@/lib/auth-cookie";
+import {
+  getSessionCookieClearOptions,
+  getSessionCookieName,
+} from "@/lib/auth-cookie";
 import { decodeSessionJwt } from "@/lib/session-jwt";
 import { prisma } from "@/lib/db";
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
@@ -80,6 +83,22 @@ export const getSession = cache(async (): Promise<Session | null> => {
   };
 });
 
+/** Drop a stale JWT so edge middleware stops treating the user as signed in. */
+export async function clearSessionCookie() {
+  const cookieStore = await cookies();
+  const name = getSessionCookieName();
+  if (!cookieStore.get(name)) {
+    return;
+  }
+  cookieStore.set(name, "", getSessionCookieClearOptions());
+}
+
+/** Redirect to login and clear any rejected session cookie to avoid auth redirect loops. */
+export async function redirectToLogin(): Promise<never> {
+  await clearSessionCookie();
+  redirect("/auth/login");
+}
+
 export async function getUserId(): Promise<string | null> {
   const session = await getSession();
   return session?.user.id ?? null;
@@ -129,7 +148,7 @@ export async function requireAdminOrRedirect(): Promise<string> {
   const session = await getSession();
 
   if (!session?.user.id) {
-    redirect("/auth/login");
+    return redirectToLogin();
   }
 
   if (!session.user.isAdmin) {
@@ -144,7 +163,7 @@ export async function requireManagerOrRedirect(): Promise<string> {
   const session = await getSession();
 
   if (!session?.user.id) {
-    redirect("/auth/login");
+    return redirectToLogin();
   }
 
   if (session.user.isAdmin) {

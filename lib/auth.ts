@@ -107,7 +107,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Edge-only gate for proxy (no DB access). Authoritative checks live in getSession().
     authorized({ auth: session, request: { nextUrl } }) {
       const isLoggedIn = !!session?.user;
-      const isAuthPage = nextUrl.pathname.startsWith("/auth");
       const isProtected =
         nextUrl.pathname.startsWith("/dashboard") ||
         nextUrl.pathname.startsWith("/loans") ||
@@ -139,11 +138,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return Response.redirect(new URL("/admin/dashboard", nextUrl));
       }
 
-      if (isLoggedIn && isAuthPage) {
-        return Response.redirect(
-          new URL(session?.user?.isAdmin ? "/admin/dashboard" : "/dashboard", nextUrl)
-        );
-      }
+      // Do not redirect away from /auth/* here — stale JWTs pass this edge check
+      // while getSession() rejects them server-side, causing redirect loops.
+      // Login/home pages redirect after DB-validated getSession() instead.
 
       return true;
     },

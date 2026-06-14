@@ -7,13 +7,13 @@ import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { getDashboardStats } from "@/lib/dashboard";
-import { getSession } from "@/lib/session";
+import { getSession, redirectToLogin } from "@/lib/session";
 import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session?.user?.id) {
-    redirect("/auth/login");
+    return redirectToLogin();
   }
 
   if (session.user.isAdmin) {

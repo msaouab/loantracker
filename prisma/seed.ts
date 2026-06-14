@@ -7,11 +7,11 @@ import { getDatabaseUrl } from "../lib/database-url";
 import { formatCurrency } from "../lib/loans";
 
 const DEMO_EMAIL = "demo@loantracker.local";
-const DEMO_PASSWORD = "Demo1234!";
+const DEMO_PASSWORD = "Pass@123!";
 const DEMO_NAME = "Demo Manager";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@loantracker.local";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "Admin1234!";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "Admin@123!";
 const ADMIN_NAME = process.env.ADMIN_NAME ?? "System Admin";
 
 const MANAGER2_EMAIL = "manager2@loantracker.local";
