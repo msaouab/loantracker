@@ -1,22 +1,9 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
-import { getSessionCookieName } from "@/lib/auth-cookie";
-import { decodeSessionJwt } from "@/lib/session-jwt";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
-
-async function readSessionToken() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(getSessionCookieName());
-
-  if (!sessionCookie?.value) {
-    return null;
-  }
-
-  return decodeSessionJwt(sessionCookie.value);
-}
 
 const sessionUserSelect = {
   id: true,
@@ -31,31 +18,21 @@ const sessionUserSelect = {
 /**
  * Authoritative session reader for RSC and API routes.
  *
- * Session architecture:
- * - Edge/proxy uses `auth()` from Auth.js for lightweight route gating.
- * - Server routes and RSC use `decodeSessionJwt()` via this module, with DB
- *   re-validation on every request (React `cache` dedupes within a request).
- *
- * Both paths must stay aligned on cookie name, secret, and JWT claims — see
- * `lib/session-jwt.ts` when upgrading next-auth.
+ * Decodes the session via Auth.js `auth()` — the SAME decode path the edge
+ * middleware uses — so the two can never disagree on whether a cookie is valid
+ * (the previous manual `getToken` path could, causing "login doesn't stick").
+ * On top of that decode it re-validates against the DB every request (React
+ * `cache` dedupes within a request) so freeze/delete/revocation take effect live.
  */
 export const getSession = cache(async (): Promise<Session | null> => {
-  const token = await readSessionToken();
-  if (!token) {
+  const decoded = await auth();
+  if (!decoded?.user?.id) {
     return null;
   }
-
-  const userId = token.id ?? token.sub;
-  if (typeof userId !== "string") {
-    return null;
-  }
-
-  if (token.exp == null) {
-    return null;
-  }
+  const tokenUser = decoded.user;
 
   const user = await prisma.user.findUnique({
-    where: { id: userId },
+    where: { id: tokenUser.id },
     select: sessionUserSelect,
   });
 
@@ -64,7 +41,7 @@ export const getSession = cache(async (): Promise<Session | null> => {
   }
 
   const tokenSessionVersion =
-    typeof token.sessionVersion === "number" ? token.sessionVersion : 0;
+    typeof tokenUser.sessionVersion === "number" ? tokenUser.sessionVersion : 0;
   if (user.sessionVersion !== tokenSessionVersion) {
     return null;
   }
@@ -76,7 +53,7 @@ export const getSession = cache(async (): Promise<Session | null> => {
       name: user.fullName,
       isAdmin: user.isAdmin,
     },
-    expires: new Date(Number(token.exp) * 1000).toISOString(),
+    expires: decoded.expires,
   };
 });
 

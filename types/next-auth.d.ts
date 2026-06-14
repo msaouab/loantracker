@@ -14,6 +14,7 @@ declare module "next-auth" {
       email?: string | null;
       name?: string | null;
       isAdmin?: boolean;
+      sessionVersion?: number;
     };
   }
 }
