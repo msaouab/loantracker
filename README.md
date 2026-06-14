@@ -41,7 +41,7 @@ cp .env.example .env
 # Fill in DATABASE_URL and AUTH_SECRET
 
 npx prisma migrate deploy
-npm run db:seed   # optional: demo data + admin account
+npm run db:seed
 
 npm run dev
 ```
@@ -57,9 +57,6 @@ Open [http://localhost:3000](http://localhost:3000).
 | `NEXTAUTH_URL` | App URL (e.g. `http://localhost:3000`) |
 | `NEXT_PUBLIC_APP_NAME` | Display name in the UI |
 | `NEXT_PUBLIC_APP_URL` | Public app URL |
-| `ADMIN_EMAIL` | Admin account email (seed script) |
-| `ADMIN_PASSWORD` | Admin account password (seed script) |
-| `ADMIN_NAME` | Admin display name (seed script) |
 | `CRON_SECRET` | Bearer secret for scheduled cron routes (e.g. purge deleted loans). Required in production on Vercel; route returns 401 until set. |
 
 Never commit `.env` — it contains secrets. Use `.env.example` as a template.
