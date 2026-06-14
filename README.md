@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Loan Tracker
+
+A simple web app to digitize loan management — track clients, payments, and financial KPIs in one place.
+
+Loan Tracker replaces paper-based loan tracking with a lightweight digital system. Managers can register and log in, create and edit loan records, log partial payments, and monitor totals, recovery rates, and trends from a dashboard. An admin panel supports user management (activation, freeze, delete).
+
+## Features
+
+- User registration and login (session-based auth)
+- Loan CRUD — client, amount, date, trust flag, notes
+- Payment history per loan (add, edit, delete)
+- Dashboard KPIs and charts
+- Loan list with search, sort, and mobile layout
+- Soft delete with a recovered-loans view
+- Admin user management (create, activate, freeze, delete)
+- Dark and light theme
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router), React 19
+- **Auth:** Auth.js / NextAuth v5
+- **Database:** PostgreSQL, Prisma 7
+- **UI:** shadcn/ui, Tailwind CSS 4, Recharts
+- **Validation:** Zod, React Hook Form
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL database (e.g. [Neon](https://neon.tech))
+
+### Setup
 
 ```bash
+git clone https://github.com/<your-username>/loantracker.git
+cd loantracker
+npm install
+
+cp .env.example .env
+# Fill in DATABASE_URL and AUTH_SECRET
+
+npx prisma migrate deploy
+npm run db:seed   # optional: demo data + admin account
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_SECRET` | Random secret for session signing |
+| `NEXTAUTH_URL` | App URL (e.g. `http://localhost:3000`) |
+| `NEXT_PUBLIC_APP_NAME` | Display name in the UI |
+| `NEXT_PUBLIC_APP_URL` | Public app URL |
+| `ADMIN_EMAIL` | Admin account email (seed script) |
+| `ADMIN_PASSWORD` | Admin account password (seed script) |
+| `ADMIN_NAME` | Admin display name (seed script) |
 
-## Learn More
+Never commit `.env` — it contains secrets. Use `.env.example` as a template.
 
-To learn more about Next.js, take a look at the following resources:
+### Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Generate Prisma client and build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm run db:seed` | Seed database with demo data |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy on [Vercel](https://vercel.com) with a PostgreSQL provider such as Neon. Set all environment variables in your deployment settings and run migrations against the production database before going live.

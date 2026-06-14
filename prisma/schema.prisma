@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  password              String
+  fullName              String
+  isAdmin               Boolean   @default(false)
+  isActivated           Boolean   @default(false)
+  isFrozen              Boolean   @default(false)
+  sessionVersion        Int       @default(0)
+  activationToken       String?
+  activationTokenExpiry DateTime?
+  resetToken            String?
+  resetTokenExpiry      DateTime?
+  lastLoginAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  loans                 Loan[]
+
+  @@map("users")
+}
+
+model Loan {
+  id          String    @id @default(uuid())
+  userId      String
+  clientName  String
+  totalAmount Int
+  amountPaid  Int       @default(0)
+  loanDate    DateTime  @default(now())
+  description String?
+  clientTrust Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments LoanPayment[]
+
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("loans")
+}
+
+model LoanPayment {
+  id        String   @id @default(uuid())
+  loanId    String
+  amount    Int
+  paidAt    DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@index([paidAt])
+  @@map("loan_payments")
+}
