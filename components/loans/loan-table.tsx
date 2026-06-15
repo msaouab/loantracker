@@ -39,6 +39,7 @@ import {
   PAGE_HEADER_TOOLBAR_CLASS,
 } from "@/components/shared/page-header";
 import { fetchLoanList, type Loan } from "@/lib/loans-client";
+import { notifyError } from "@/lib/toast";
 import {
   DEFAULT_LOAN_PAGE_SIZE,
   LOAN_PAGE_SIZE_OPTIONS,
@@ -73,7 +74,7 @@ export function LoanTable({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loanToDelete, setLoanToDelete] = useState<{
     id: string;
     clientName: string;
@@ -84,7 +85,7 @@ export function LoanTable({
 
   const loadLoans = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setLoadFailed(false);
 
     try {
       const data = await fetchLoanList({
@@ -101,11 +102,8 @@ export function LoanTable({
       setTotalPages(data.pagination.totalPages);
       setTotal(data.pagination.total);
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Failed to load loans"
-      );
+      setLoadFailed(true);
+      notifyError(loadError, "Failed to load loans");
     } finally {
       setLoading(false);
     }
@@ -165,7 +163,7 @@ export function LoanTable({
     setPage(1);
   }
 
-  const emptyState = !loading && !error && loans.length === 0 && (
+  const emptyState = !loading && !loadFailed && loans.length === 0 && (
     <LoanEmptyState
       status={status}
       message={emptyMessage}
@@ -181,7 +179,7 @@ export function LoanTable({
         description={
           loading
             ? "Loading portfolio..."
-            : error
+            : loadFailed
               ? "Unable to load portfolio"
               : status === "completed"
                 ? `${total} record${total === 1 ? "" : "s"} · removed 30 days after full payment${hasActiveFilters ? " matching filters" : ""}`
@@ -232,17 +230,12 @@ export function LoanTable({
         />
       </PageHeader>
 
-      {error ? (
-        <div
-          role="alert"
-          className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <p className="text-sm text-destructive">{error}</p>
+      {loadFailed ? (
+        <div className="flex justify-end px-4 pb-2 sm:px-0">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="shrink-0 border-destructive/30"
             disabled={loading}
             onClick={() => loadLoans()}
           >

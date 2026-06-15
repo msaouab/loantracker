@@ -7,6 +7,30 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Cache of IP → geolocation (ip-api.com). Keyed by the anonymized /24 IP, so
+/// each network resolves once and is reused — keeps us far under ip-api's
+/// free-tier rate limit (45 req/min).
+model IpLocation {
+  ip          String   @id
+  status      String
+  country     String?
+  countryCode String?
+  region      String?
+  regionCode  String?
+  city        String?
+  zip         String?
+  lat         Float?
+  lon         Float?
+  timezone    String?
+  isp         String?
+  org         String?
+  asn         String?
+  fetchedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ip_locations")
+}
+
 model User {
   id                    String    @id @default(uuid())
   email                 String    @unique

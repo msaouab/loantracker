@@ -1,4 +1,5 @@
 import { request } from "@/lib/api-client";
+import type { IpApiLocationPayload } from "@/lib/ip-location-shared";
 
 export type ActivityItem = {
   id: string;
@@ -11,6 +12,8 @@ export type ActivityItem = {
   userAgent: string | null;
   browser: string | null;
   clientInfo: string | null;
+  location: string | null;
+  locationDetail: IpApiLocationPayload | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
   actorName: string | null;
@@ -34,6 +37,7 @@ export async function fetchActivities(params: {
   pageSize?: number;
   category?: ActivityTab;
   admin?: boolean;
+  userId?: string;
 }) {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set("page", String(params.page));
@@ -42,7 +46,11 @@ export async function fetchActivities(params: {
     searchParams.set("category", params.category);
   }
 
-  const base = params.admin ? "/api/admin/activity" : "/api/activity";
+  const base = params.userId
+    ? `/api/admin/users/${params.userId}/activity`
+    : params.admin
+      ? "/api/admin/activity"
+      : "/api/activity";
   const query = searchParams.toString();
   const url = query ? `${base}?${query}` : base;
 

@@ -1,10 +1,7 @@
 import { apiOk } from "@/lib/api-response";
 import { apiError } from "@/lib/error-response";
 import { ActivityActions } from "@/lib/activity-log";
-import {
-  anonymizeStaleActivityPii,
-  purgeExpiredActivityLogs,
-} from "@/lib/activity-retention";
+import { purgeExpiredActivityLogs } from "@/lib/activity-retention";
 import { logActivitySafe } from "@/lib/activity-log-service";
 import { prisma } from "@/lib/db";
 import {
@@ -38,7 +35,6 @@ export async function GET(request: Request) {
     { name: "purgedDeleted", run: purgeExpiredDeletedLoans },
     { name: "purgedRecovered", run: purgeExpiredRecoveredLoans },
     { name: "purgedActivityLogs", run: purgeExpiredActivityLogs },
-    { name: "anonymizedPii", run: anonymizeStaleActivityPii },
   ] as const;
 
   const results = await Promise.allSettled(tasks.map((task) => task.run()));

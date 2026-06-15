@@ -5,6 +5,7 @@ import { LoanForm } from "@/components/forms/loan-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { dateParamToIso } from "@/lib/dates";
 import { createLoan } from "@/lib/loans-client";
+import { notifySuccess } from "@/lib/toast";
 
 export default function NewLoanPage() {
   const router = useRouter();
@@ -26,9 +27,10 @@ export default function NewLoanPage() {
                 loanDate: dateParamToIso(values.loanDate),
               });
 
-            router.push("/loans");
-            router.refresh();
-          }}
+              notifySuccess(`Loan created for ${values.clientName}`);
+              router.push("/loans");
+              router.refresh();
+            }}
         />
       </div>
     </div>

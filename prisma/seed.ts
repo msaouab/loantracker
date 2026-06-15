@@ -3,7 +3,11 @@ import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "../app/generated/prisma/client";
 import { ActivityActions } from "../lib/activity-log";
+import { buildAuthSummary } from "../lib/activity-log-service";
+import type { ClientInfo } from "../lib/client-info";
+import { clientInfoToDeviceMetadata } from "../lib/client-info";
 import { getDatabaseUrl } from "../lib/database-url";
+import { anonymizeIp } from "../lib/ip-anonymization";
 import { computeRecoveredAt } from "../lib/loan-recovery";
 import { formatCurrency } from "../lib/loans";
 
@@ -13,6 +17,44 @@ const DEMO_NAME = "Demo Manager";
 
 const LOAN_COUNT = 20;
 const DELETED_LOAN_COUNT = 3;
+
+/** Public demo IPs (RFC 5737) — anonymized to /24, matching production activity logs. */
+const SEED_IP_CASA = anonymizeIp("203.0.113.45");
+const SEED_IP_RABAT = anonymizeIp("198.51.100.82");
+const SEED_IP_LOCAL = "127.0.0.1";
+
+const SEED_IP_LOCATIONS = [
+  {
+    ip: SEED_IP_CASA,
+    country: "Morocco",
+    countryCode: "MA",
+    region: "Casablanca-Settat",
+    regionCode: "06",
+    city: "Casablanca",
+    zip: "20000",
+    lat: 33.5731,
+    lon: -7.5898,
+    timezone: "Africa/Casablanca",
+    isp: "Maroc Telecom",
+    org: "IAM",
+    asn: "AS6713 Office National des Postes et Telecommunications ONPT (Maroc Telecom)",
+  },
+  {
+    ip: SEED_IP_RABAT,
+    country: "Morocco",
+    countryCode: "MA",
+    region: "Rabat-Sale-Kenitra",
+    regionCode: "04",
+    city: "Rabat",
+    zip: "10000",
+    lat: 34.0209,
+    lon: -6.8416,
+    timezone: "Africa/Casablanca",
+    isp: "INWI",
+    org: "Wana Corporate",
+    asn: "AS36884 Wana Corporate",
+  },
+] as const;
 
 const DEMO_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -130,16 +172,57 @@ function buildPaymentInstallments(
   });
 }
 
-function buildAuthSummary(
+function authActivityFields(
   action: typeof ActivityActions.AUTH_LOGIN | typeof ActivityActions.AUTH_PASSWORD_CHANGED,
-  browser: string,
-  ipAddress: string
+  clientInfo: ClientInfo
 ) {
-  const clientLabel = `${browser} · ${ipAddress}`;
-  if (action === ActivityActions.AUTH_LOGIN) {
-    return `Signed in from ${clientLabel}`;
+  return {
+    summary: buildAuthSummary(action),
+    ipAddress: clientInfo.ipAddress ?? undefined,
+    browser: clientInfo.browser ?? undefined,
+    userAgent: clientInfo.userAgent ?? undefined,
+    metadata: { device: clientInfoToDeviceMetadata(clientInfo) },
+  };
+}
+
+async function seedIpLocations(prisma: PrismaClient) {
+  for (const loc of SEED_IP_LOCATIONS) {
+    await prisma.ipLocation.upsert({
+      where: { ip: loc.ip },
+      update: {
+        status: "success",
+        country: loc.country,
+        countryCode: loc.countryCode,
+        region: loc.region,
+        regionCode: loc.regionCode,
+        city: loc.city,
+        zip: loc.zip,
+        lat: loc.lat,
+        lon: loc.lon,
+        timezone: loc.timezone,
+        isp: loc.isp,
+        org: loc.org,
+        asn: loc.asn,
+        fetchedAt: new Date(),
+      },
+      create: {
+        ip: loc.ip,
+        status: "success",
+        country: loc.country,
+        countryCode: loc.countryCode,
+        region: loc.region,
+        regionCode: loc.regionCode,
+        city: loc.city,
+        zip: loc.zip,
+        lat: loc.lat,
+        lon: loc.lon,
+        timezone: loc.timezone,
+        isp: loc.isp,
+        org: loc.org,
+        asn: loc.asn,
+      },
+    });
   }
-  return `Password changed from ${clientLabel}`;
 }
 
 async function seedActivityLogs(prisma: PrismaClient, logs: ActivitySeed[]) {
@@ -277,22 +360,32 @@ async function main() {
     {
       userId: demo.id,
       action: ActivityActions.AUTH_LOGIN,
-      summary: buildAuthSummary(ActivityActions.AUTH_LOGIN, "Chrome", "192.168.1.10"),
       entityType: "session",
-      ipAddress: "192.168.1.10",
-      browser: "Chrome",
-      userAgent: DEMO_USER_AGENT,
       createdAt: daysAgo(14, 9),
+      ...authActivityFields(ActivityActions.AUTH_LOGIN, {
+        ipAddress: SEED_IP_CASA,
+        userAgent: DEMO_USER_AGENT,
+        browser: "Chrome",
+        browserVersion: "120",
+        os: "macOS",
+        deviceType: "desktop",
+        language: "en-US",
+      }),
     },
     {
       userId: demo.id,
       action: ActivityActions.AUTH_PASSWORD_CHANGED,
-      summary: buildAuthSummary(ActivityActions.AUTH_PASSWORD_CHANGED, "Chrome", "192.168.1.10"),
       entityType: "session",
-      ipAddress: "192.168.1.10",
-      browser: "Chrome",
-      userAgent: DEMO_USER_AGENT,
       createdAt: daysAgo(13, 18),
+      ...authActivityFields(ActivityActions.AUTH_PASSWORD_CHANGED, {
+        ipAddress: SEED_IP_CASA,
+        userAgent: DEMO_USER_AGENT,
+        browser: "Chrome",
+        browserVersion: "120",
+        os: "macOS",
+        deviceType: "desktop",
+        language: "en-US",
+      }),
     },
     {
       userId: demo.id,
@@ -361,25 +454,36 @@ async function main() {
     {
       userId: demo.id,
       action: ActivityActions.AUTH_LOGIN,
-      summary: buildAuthSummary(ActivityActions.AUTH_LOGIN, "Safari", "192.168.1.24"),
       entityType: "session",
-      ipAddress: "192.168.1.24",
-      browser: "Safari",
-      userAgent: SAFARI_USER_AGENT,
       createdAt: daysAgo(1, 8),
+      ...authActivityFields(ActivityActions.AUTH_LOGIN, {
+        ipAddress: SEED_IP_RABAT,
+        userAgent: SAFARI_USER_AGENT,
+        browser: "Safari",
+        browserVersion: "17",
+        os: "macOS",
+        deviceType: "desktop",
+        language: "fr-MA",
+      }),
     },
     {
       userId: demo.id,
       action: ActivityActions.AUTH_LOGIN,
-      summary: buildAuthSummary(ActivityActions.AUTH_LOGIN, "Chrome", "127.0.0.1"),
       entityType: "session",
-      ipAddress: "127.0.0.1",
-      browser: "Chrome",
-      userAgent: DEMO_USER_AGENT,
       createdAt: daysAgo(0, 8, 30),
+      ...authActivityFields(ActivityActions.AUTH_LOGIN, {
+        ipAddress: SEED_IP_LOCAL,
+        userAgent: DEMO_USER_AGENT,
+        browser: "Chrome",
+        browserVersion: "120",
+        os: "macOS",
+        deviceType: "desktop",
+        language: "en-US",
+      }),
     },
   ];
 
+  await seedIpLocations(prisma);
   await seedActivityLogs(prisma, activityLogs);
 
   const activeLoans = demoLoans.filter(
@@ -398,6 +502,7 @@ async function main() {
   console.log(`  Recovered:     ${recoveredLoans.length}`);
   console.log(`  Soft-deleted:  ${deletedLoans.length}`);
   console.log(`  Activity logs: ${activityLogs.length}`);
+  console.log(`  IP locations:  ${SEED_IP_LOCATIONS.length}`);
 }
 
 main()

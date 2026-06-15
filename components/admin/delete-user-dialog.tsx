@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -13,8 +13,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import { deleteAdminUser } from "@/lib/admin-client";
+import { notifyError, notifySuccess } from "@/lib/toast";
 
 type DeleteUserDialogProps = {
   open: boolean;
@@ -32,10 +32,6 @@ export function DeleteUserDialog({
   onDeleted,
 }: DeleteUserDialogProps) {
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const resetError = useCallback(() => setError(null), []);
-  useResetOnClose(open, resetError);
 
   async function handleConfirm() {
     if (!userId) {
@@ -43,18 +39,14 @@ export function DeleteUserDialog({
     }
 
     setDeleting(true);
-    setError(null);
 
     try {
       await deleteAdminUser(userId);
       onOpenChange(false);
       onDeleted?.();
+      notifySuccess(fullName ? `Removed ${fullName}` : "User removed");
     } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Failed to delete user"
-      );
+      notifyError(deleteError, "Failed to delete user");
     } finally {
       setDeleting(false);
     }
@@ -74,10 +66,6 @@ export function DeleteUserDialog({
               : "This will permanently delete this user account and all associated loan records. This action cannot be undone."}
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        {error ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : null}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>

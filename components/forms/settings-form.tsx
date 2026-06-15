@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,13 +46,13 @@ export function SettingsForm({
 
     try {
       await updateProfile(fullName);
-      toast.success("Profile updated");
+      notifySuccess("Profile updated");
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError && error.fieldErrors) {
         setProfileErrors(error.fieldErrors);
       } else {
-        toast.error(error instanceof Error ? error.message : "Failed to update profile");
+        notifyError(error, "Failed to update profile");
       }
     } finally {
       setProfileLoading(false);
@@ -73,14 +73,14 @@ export function SettingsForm({
 
     try {
       await changePassword(payload);
-      toast.success("Password changed. Please sign in again.");
+      notifySuccess("Password changed. Please sign in again.");
       await signOut({ callbackUrl: "/auth/login?passwordChanged=true" });
     } catch (error) {
       setPasswordLoading(false);
       if (error instanceof ApiRequestError && error.fieldErrors) {
         setPasswordErrors(error.fieldErrors);
       } else {
-        toast.error(error instanceof Error ? error.message : "Failed to change password");
+        notifyError(error, "Failed to change password");
       }
     }
   }

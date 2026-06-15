@@ -18,6 +18,7 @@ import {
   fetchLoanPayments,
   type LoanPayment,
 } from "@/lib/loan-payments-client";
+import { notifyError, notifySuccess } from "@/lib/toast";
 
 type LoanPaymentHistoryProps = {
   loanId: string;
@@ -41,7 +42,6 @@ export function LoanPaymentHistory({
   );
   const [outstanding, setOutstanding] = useState(initialOutstanding ?? 0);
   const [loading, setLoading] = useState(!hasInitialData);
-  const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addAmount, setAddAmount] = useState("");
   const [addDate, setAddDate] = useState(todayDateParam());
@@ -54,18 +54,13 @@ export function LoanPaymentHistory({
 
   const loadPayments = useCallback(async () => {
     setLoading(true);
-    setError(null);
 
     try {
       const data = await fetchLoanPayments(loanId);
       setPayments(data.payments);
       setOutstanding(data.outstanding);
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Failed to load payment history"
-      );
+      notifyError(loadError, "Failed to load payment history");
     } finally {
       setLoading(false);
     }
@@ -83,15 +78,10 @@ export function LoanPaymentHistory({
         if (cancelled) return;
         setPayments(data.payments);
         setOutstanding(data.outstanding);
-        setError(null);
       })
       .catch((loadError: unknown) => {
         if (cancelled) return;
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Failed to load payment history"
-        );
+        notifyError(loadError, "Failed to load payment history");
       })
       .finally(() => {
         if (!cancelled) {
@@ -109,12 +99,11 @@ export function LoanPaymentHistory({
     const amount = Math.round(Number(addAmount));
 
     if (!amount || amount <= 0) {
-      setError("Enter a valid payment amount");
+      notifyError(null, "Enter a valid payment amount");
       return;
     }
 
     setAdding(true);
-    setError(null);
 
     try {
       await createLoanPayment(loanId, {
@@ -128,12 +117,9 @@ export function LoanPaymentHistory({
       setShowAddForm(false);
       await loadPayments();
       onPaymentsChanged?.();
+      notifySuccess("Payment recorded");
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Failed to record payment"
-      );
+      notifyError(submitError, "Failed to record payment");
     } finally {
       setAdding(false);
     }
@@ -185,12 +171,6 @@ export function LoanPaymentHistory({
           </Button>
         ) : null}
       </div>
-
-      {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
 
       {showAddForm ? (
         <form

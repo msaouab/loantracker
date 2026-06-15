@@ -7,6 +7,7 @@ import { LoanFormSkeleton } from "@/components/loans/loan-skeletons";
 import { PageHeader } from "@/components/shared/page-header";
 import { dateParamToIso, formatDateParam } from "@/lib/dates";
 import { fetchLoan, updateLoan } from "@/lib/loans-client";
+import { notifyError, notifySuccess } from "@/lib/toast";
 
 type LoanDetails = LoanFormValues & {
   id: string;
@@ -41,6 +42,7 @@ export default function EditLoanPage({
           outstanding: data.loan.outstanding,
         });
       } catch {
+        notifyError(null, "Failed to load loan");
         router.push("/loans");
       } finally {
         setLoading(false);
@@ -76,6 +78,7 @@ export default function EditLoanPage({
               clientTrust: values.clientTrust,
             });
 
+            notifySuccess(`Loan updated for ${values.clientName}`);
             router.push(`/loans/${loanId}`);
             router.refresh();
           }}

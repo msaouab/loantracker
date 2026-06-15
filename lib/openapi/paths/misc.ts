@@ -266,6 +266,24 @@ export const adminPaths: OpenAPIV3.PathsObject = {
       },
     },
   },
+  "/api/admin/users/{id}/activity": {
+    get: {
+      tags: ["Admin · Activity"],
+      summary: "List activity for a specific user",
+      operationId: "listAdminUserActivity",
+      security: adminSecurity,
+      parameters: [
+        { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ...activityQuery,
+      ],
+      responses: {
+        "200": okResponse(ref("ActivityList")),
+        "401": errorResponses.Unauthorized,
+        "403": errorResponses.Forbidden,
+        "404": errorResponses.NotFound,
+      },
+    },
+  },
   "/api/admin/activity": {
     get: {
       tags: ["Admin · Activity"],

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Check, Plus, RefreshCw, ShieldBan, Snowflake } from "lucide-react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
 import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
@@ -49,9 +49,7 @@ export function UserTable() {
       const data = await fetchAdminUsers();
       setUsers(data);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load users"
-      );
+      notifyError(error, "Failed to load users");
     } finally {
       setLoading(false);
     }
@@ -66,9 +64,7 @@ export function UserTable() {
       })
       .catch((error) => {
         if (!cancelled) {
-          toast.error(
-            error instanceof Error ? error.message : "Failed to load users"
-          );
+          notifyError(error, "Failed to load users");
         }
       })
       .finally(() => {
@@ -87,7 +83,7 @@ export function UserTable() {
     setActionUserId(userId);
     try {
       await updateAdminUser(userId, action);
-      toast.success(
+      notifySuccess(
         action === "approve"
           ? "User approved"
           : action === "freeze"
@@ -96,9 +92,7 @@ export function UserTable() {
       );
       await loadUsers();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update user"
-      );
+      notifyError(error, "Failed to update user");
     } finally {
       setActionUserId(null);
     }
@@ -286,7 +280,7 @@ export function UserTable() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={() => {
-          toast.success("User created");
+          notifySuccess("User created");
           void loadUsers();
         }}
       />

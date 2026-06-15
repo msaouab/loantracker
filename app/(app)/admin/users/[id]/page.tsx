@@ -2,6 +2,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { ActivityFeed } from "@/components/activity/activity-feed";
 import { AdminUserProfile } from "@/components/admin/admin-user-profile";
 import { DashboardCharts } from "@/components/dashboard/charts";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
@@ -60,6 +61,13 @@ export default async function AdminUserProfilePage({
         <h2 className="text-lg font-semibold tracking-tight">Account management</h2>
         <AdminUserProfile initialUser={serializedUser} />
       </section>
+
+      <ActivityFeed
+        embedded
+        userId={id}
+        title="Activity"
+        description="Sign-ins, loan updates, payments, and account changes for this user."
+      />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { format } from "date-fns";
 import { Check, ShieldBan, Snowflake } from "lucide-react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,13 +72,13 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
       setUser(updated);
       setFullName(updated.fullName);
       setEmail(updated.email);
-      toast.success("User profile updated");
+      notifySuccess("User profile updated");
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError && error.fieldErrors) {
         setProfileErrors(error.fieldErrors);
       } else {
-        toast.error(error instanceof Error ? error.message : "Failed to update user");
+        notifyError(error, "Failed to update user");
       }
     } finally {
       setProfileLoading(false);
@@ -98,14 +98,14 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
 
     try {
       await resetAdminUserPassword(user.id, payload);
-      toast.success("Password reset. The user will need to sign in again.");
+      notifySuccess("Password reset. The user will need to sign in again.");
       event.currentTarget.reset();
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError && error.fieldErrors) {
         setPasswordErrors(error.fieldErrors);
       } else {
-        toast.error(error instanceof Error ? error.message : "Failed to reset password");
+        notifyError(error, "Failed to reset password");
       }
     } finally {
       setPasswordLoading(false);
@@ -118,7 +118,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
       await updateAdminUser(user.id, action);
       const data = await fetchAdminUser(user.id);
       setUser(data.user);
-      toast.success(
+      notifySuccess(
         action === "approve"
           ? "User approved"
           : action === "freeze"
@@ -127,9 +127,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
       );
       router.refresh();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update user status"
-      );
+      notifyError(error, "Failed to update user status");
     } finally {
       setActionUserId(null);
     }
@@ -278,7 +276,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
         userId={user.id}
         fullName={user.fullName}
         onDeleted={() => {
-          toast.success("User removed");
+          notifySuccess("User removed");
           router.push("/admin/users");
           router.refresh();
         }}

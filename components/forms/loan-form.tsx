@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { todayDateParam } from "@/lib/dates";
 import { formatCurrency, getOutstanding } from "@/lib/loans";
+import { notifyError } from "@/lib/toast";
 
 export type LoanFormValues = {
   clientName: string;
@@ -55,33 +56,23 @@ export function LoanForm({
 }: LoanFormProps) {
   const [values, setValues] = useState(() => createInitialValues(initialValues));
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const outstanding = getOutstanding(values.totalAmount, values.amountPaid);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setError(null);
 
     try {
       await onSubmit(values);
     } catch (submitError) {
-      setError(
-        submitError instanceof Error ? submitError.message : "Failed to save loan"
-      );
+      notifyError(submitError, "Failed to save loan");
       setLoading(false);
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="clientName">Client Name</Label>

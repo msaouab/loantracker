@@ -9,17 +9,16 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { ApiRequestError } from "@/lib/api-client";
 import { registerUser } from "@/lib/auth-client";
+import { notifyError } from "@/lib/toast";
 
 export function RegisterForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setError(null);
     setFieldErrors({});
 
     const formData = new FormData(event.currentTarget);
@@ -36,9 +35,7 @@ export function RegisterForm() {
       if (submitError instanceof ApiRequestError && submitError.fieldErrors) {
         setFieldErrors(submitError.fieldErrors);
       } else {
-        setError(
-          submitError instanceof Error ? submitError.message : "Registration failed"
-        );
+        notifyError(submitError, "Registration failed");
       }
     } finally {
       setLoading(false);
@@ -47,12 +44,6 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-
       <div className="space-y-2">
         <Label htmlFor="fullName">Full Name</Label>
         <Input id="fullName" name="fullName" required />

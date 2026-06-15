@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import { notifyError, notifyInfo } from "@/lib/toast";
 
 export function LoginForm({
   registered = false,
@@ -19,13 +20,21 @@ export function LoginForm({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    if (registered) {
+      notifyInfo(
+        "Account created. Please wait for an admin to approve your account before signing in."
+      );
+    } else if (passwordChanged) {
+      notifyInfo("Your password was updated. Sign in with your new password.");
+    }
+  }, [registered, passwordChanged]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setError(null);
 
     const formData = new FormData(event.currentTarget);
     const email = formData.get("email") as string;
@@ -42,11 +51,14 @@ export function LoginForm({
 
     if (result?.error) {
       if (result.code === "account_not_activated") {
-        setError("Your account is pending approval. Please wait for an admin to activate it.");
+        notifyError(
+          null,
+          "Your account is pending approval. Please wait for an admin to activate it."
+        );
       } else if (result.code === "account_frozen") {
-        setError("Your account has been frozen. Contact an administrator.");
+        notifyError(null, "Your account has been frozen. Contact an administrator.");
       } else {
-        setError("Invalid email or password.");
+        notifyError(null, "Invalid email or password.");
       }
       return;
     }
@@ -57,23 +69,6 @@ export function LoginForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {registered ? (
-        <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
-          Account created. Please wait for an admin to approve your account before
-          signing in.
-        </p>
-      ) : null}
-      {passwordChanged ? (
-        <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
-          Your password was updated. Sign in with your new password.
-        </p>
-      ) : null}
-      {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" required />

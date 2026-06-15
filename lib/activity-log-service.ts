@@ -1,9 +1,28 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { ClientInfo } from "@/lib/client-info";
-import { formatClientInfo, getClientInfo } from "@/lib/client-info";
-import { ActivityActions, getActionsForTab, type ActivityTab } from "@/lib/activity-log";
+import {
+  clientInfoToDeviceMetadata,
+  deviceMetadataFromRecord,
+  formatClientInfo,
+  getClientInfo,
+} from "@/lib/client-info";
+import {
+  ActivityActions,
+  getActionsForTab,
+  isSecurityActivity,
+  type ActivityTab,
+} from "@/lib/activity-log";
+import {
+  ensureIpLocation,
+  formatLocationLabel,
+  getCachedIpLocations,
+  isPublicIp,
+  toIpApiLocationPayload,
+  type IpLocation,
+} from "@/lib/ip-location";
 import { formatCurrency } from "@/lib/loans";
+import { after } from "next/server";
 
 export type LogActivityInput = {
   userId: string;
@@ -64,9 +83,54 @@ function formatLoanActivitySummary(
   return `${verb} loan for ${clientName} (${formattedAmount})`;
 }
 
+function mergeActivityMetadata(
+  metadata: Record<string, unknown> | undefined,
+  clientInfo?: ClientInfo
+): Prisma.InputJsonValue | undefined {
+  const device = clientInfo ? clientInfoToDeviceMetadata(clientInfo) : null;
+  const hasDevice = device
+    ? Object.values(device).some((value) => value != null)
+    : false;
+
+  if (!metadata && !hasDevice) {
+    return undefined;
+  }
+
+  return {
+    ...(metadata ?? {}),
+    ...(hasDevice ? { device } : {}),
+  } as Prisma.InputJsonValue;
+}
+
+function buildClientInfoLabel(
+  log: Pick<ActivityLogRecord, "ipAddress" | "userAgent" | "browser" | "metadata">,
+  options?: { includeIp?: boolean }
+) {
+  const device = deviceMetadataFromRecord(asMetadataRecord(log.metadata));
+
+  return formatClientInfo(
+    {
+      ipAddress: log.ipAddress,
+      userAgent: log.userAgent,
+      browser: log.browser ?? device.browser ?? null,
+      browserVersion: device.browserVersion ?? null,
+      os: device.os ?? null,
+      deviceType: device.deviceType ?? null,
+      language: device.language ?? null,
+    },
+    options
+  );
+}
+
+function buildSecuritySummaryForDisplay(log: ActivityLogRecord) {
+  return log.action === ActivityActions.AUTH_LOGIN ? "Signed in" : "Password changed";
+}
+
 export function serializeActivity(
   log: ActivityLogRecord,
-  loansById?: Map<string, { clientName: string; totalAmount: number }>
+  loansById?: Map<string, { clientName: string; totalAmount: number }>,
+  locationsByIp?: Map<string, IpLocation>,
+  options?: { includeLocationDetail?: boolean }
 ) {
   let metadata = asMetadataRecord(log.metadata);
 
@@ -87,21 +151,38 @@ export function serializeActivity(
     }
   }
 
+  const cachedLocation =
+    isSecurityActivity(log.action) && log.ipAddress
+      ? locationsByIp?.get(log.ipAddress)
+      : undefined;
+
+  const includeSensitive = options?.includeLocationDetail ?? false;
+  const locationDetail =
+    includeSensitive &&
+    cachedLocation &&
+    cachedLocation.status === "success"
+      ? toIpApiLocationPayload(cachedLocation)
+      : null;
+
+  const summary = isSecurityActivity(log.action)
+    ? buildSecuritySummaryForDisplay(log)
+    : formatLoanActivitySummary(log.action, log.summary, metadata);
+
   return {
     id: log.id,
     userId: log.userId,
     action: log.action,
     entityType: log.entityType,
     entityId: log.entityId,
-    summary: formatLoanActivitySummary(log.action, log.summary, metadata),
-    ipAddress: log.ipAddress,
+    summary,
+    ipAddress: includeSensitive ? log.ipAddress : null,
     userAgent: log.userAgent,
     browser: log.browser,
-    clientInfo: formatClientInfo({
-      ipAddress: log.ipAddress,
-      userAgent: log.userAgent,
-      browser: log.browser,
+    clientInfo: buildClientInfoLabel(log, {
+      includeIp: includeSensitive && !locationDetail,
     }),
+    location: cachedLocation ? formatLocationLabel(cachedLocation) : null,
+    locationDetail,
     metadata,
     createdAt: log.createdAt.toISOString(),
     actorName: log.user?.fullName ?? null,
@@ -109,7 +190,10 @@ export function serializeActivity(
   };
 }
 
-async function serializeActivities(items: ActivityLogRecord[]) {
+async function serializeActivities(
+  items: ActivityLogRecord[],
+  options?: { includeLocationDetail?: boolean }
+) {
   const loanIds = [
     ...new Set(
       items
@@ -139,7 +223,15 @@ async function serializeActivities(items: ActivityLogRecord[]) {
     }
   }
 
-  return items.map((item) => serializeActivity(item, loansById));
+  const locationsByIp = await getCachedIpLocations(
+    items
+      .filter((item) => isSecurityActivity(item.action))
+      .map((item) => item.ipAddress)
+  );
+
+  return items.map((item) =>
+    serializeActivity(item, loansById, locationsByIp, options)
+  );
 }
 
 export async function logActivity(input: LogActivityInput) {
@@ -150,14 +242,24 @@ export async function logActivity(input: LogActivityInput) {
       summary: input.summary,
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
-      metadata: input.metadata
-        ? (input.metadata as Prisma.InputJsonValue)
-        : undefined,
+      metadata: mergeActivityMetadata(input.metadata, input.clientInfo),
       ipAddress: input.clientInfo?.ipAddress ?? null,
       userAgent: input.clientInfo?.userAgent ?? null,
       browser: input.clientInfo?.browser ?? null,
     },
   });
+
+  // Geolocation is only shown for security events, so only those warm the cache.
+  // Done after the response (`after`) and cache-first, so it never adds latency
+  // and stays well under ip-api's free-tier rate limit.
+  const ip = input.clientInfo?.ipAddress;
+  if (ip && isSecurityActivity(input.action) && isPublicIp(ip)) {
+    try {
+      after(() => ensureIpLocation(ip));
+    } catch {
+      // `after()` requires a request scope; ignore if called outside one.
+    }
+  }
 }
 
 export async function logActivitySafe(input: LogActivityInput) {
@@ -181,20 +283,16 @@ export function logActivityFromRequest(
 }
 
 export function buildAuthSummary(
-  action: typeof ActivityActions.AUTH_LOGIN | typeof ActivityActions.AUTH_PASSWORD_CHANGED,
-  clientInfo: ClientInfo
+  action: typeof ActivityActions.AUTH_LOGIN | typeof ActivityActions.AUTH_PASSWORD_CHANGED
 ) {
-  const clientLabel = formatClientInfo(clientInfo);
-  if (action === ActivityActions.AUTH_LOGIN) {
-    return clientLabel ? `Signed in from ${clientLabel}` : "Signed in";
-  }
-  return clientLabel ? `Password changed from ${clientLabel}` : "Password changed";
+  return action === ActivityActions.AUTH_LOGIN ? "Signed in" : "Password changed";
 }
 
 type ListActivitiesOptions = {
   page: number;
   pageSize: number;
   category?: ActivityTab;
+  includeLocationDetail?: boolean;
 };
 
 function buildCategoryFilter(category?: ActivityTab) {
@@ -227,7 +325,9 @@ export async function listActivitiesForUser(userId: string, options: ListActivit
   ]);
 
   return {
-    activities: await serializeActivities(items),
+    activities: await serializeActivities(items, {
+      includeLocationDetail: options.includeLocationDetail ?? false,
+    }),
     pagination: {
       page: options.page,
       pageSize: options.pageSize,
@@ -256,7 +356,7 @@ export async function listAllActivities(options: ListActivitiesOptions) {
   ]);
 
   return {
-    activities: await serializeActivities(items),
+    activities: await serializeActivities(items, { includeLocationDetail: true }),
     pagination: {
       page: options.page,
       pageSize: options.pageSize,

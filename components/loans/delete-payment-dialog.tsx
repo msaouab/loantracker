@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -13,12 +13,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import { formatCurrency } from "@/lib/loans";
 import {
   deleteLoanPayment,
   type LoanPayment,
 } from "@/lib/loan-payments-client";
+import { notifyError, notifySuccess } from "@/lib/toast";
 
 type DeletePaymentDialogProps = {
   open: boolean;
@@ -38,10 +38,6 @@ export function DeletePaymentDialog({
   onDeleted,
 }: DeletePaymentDialogProps) {
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const resetError = useCallback(() => setError(null), []);
-  useResetOnClose(open, resetError);
 
   async function handleConfirm() {
     if (!payment) {
@@ -49,18 +45,14 @@ export function DeletePaymentDialog({
     }
 
     setDeleting(true);
-    setError(null);
 
     try {
       await deleteLoanPayment(loanId, payment.id);
       onOpenChange(false);
       onDeleted?.();
+      notifySuccess(`Deleted ${formatCurrency(payment.amount)} payment`);
     } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Failed to delete payment"
-      );
+      notifyError(deleteError, "Failed to delete payment");
     } finally {
       setDeleting(false);
     }
@@ -98,8 +90,6 @@ export function DeletePaymentDialog({
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>

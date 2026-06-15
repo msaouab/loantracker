@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import {
@@ -14,8 +14,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import { deleteLoan } from "@/lib/loans-client";
+import { notifyError, notifySuccess } from "@/lib/toast";
 
 type DeleteLoanDialogProps = {
   open: boolean;
@@ -36,10 +36,6 @@ export function DeleteLoanDialog({
 }: DeleteLoanDialogProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const resetError = useCallback(() => setError(null), []);
-  useResetOnClose(open, resetError);
 
   async function handleConfirm() {
     if (!loanId) {
@@ -47,12 +43,14 @@ export function DeleteLoanDialog({
     }
 
     setDeleting(true);
-    setError(null);
 
     try {
       await deleteLoan(loanId);
       onOpenChange(false);
       onDeleted?.();
+      notifySuccess(
+        clientName ? `Deleted loan for ${clientName}` : "Loan deleted"
+      );
 
       if (redirectTo) {
         router.push(redirectTo);
@@ -60,11 +58,7 @@ export function DeleteLoanDialog({
 
       router.refresh();
     } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Failed to delete loan"
-      );
+      notifyError(deleteError, "Failed to delete loan");
     } finally {
       setDeleting(false);
     }
@@ -84,10 +78,6 @@ export function DeleteLoanDialog({
               : "This loan will be moved to Deleted loans in Settings. Deleted loans are kept for 30 days, then permanently removed. You can restore it during that window."}
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        {error ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : null}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>

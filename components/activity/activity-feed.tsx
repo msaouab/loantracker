@@ -34,7 +34,9 @@ import {
 } from "@/lib/activity-log";
 import { fetchActivities, type ActivityItem } from "@/lib/activity-client";
 import { ActivityEmptyState } from "@/components/activity/activity-empty-state";
+import { ActivityLocationInfo } from "@/components/activity/activity-location-info";
 import { cn } from "@/lib/utils";
+import { notifyError } from "@/lib/toast";
 
 function getActionLabel(action: string) {
   return ACTIVITY_ACTION_LABELS[action as ActivityAction] ?? action;
@@ -82,9 +84,11 @@ function ActivityActionIcon({
 function ActivityRow({
   item,
   showActor,
+  canCopyLocation,
 }: {
   item: ActivityItem;
   showActor: boolean;
+  canCopyLocation: boolean;
 }) {
   const loanHref =
     item.entityType === "loan" && item.entityId ? `/loans/${item.entityId}` : null;
@@ -103,12 +107,18 @@ function ActivityRow({
             {format(new Date(item.createdAt), "MMM d, yyyy · h:mm a")}
           </span>
         </div>
-        <p className="text-sm leading-snug">{item.summary}</p>
+        <p className="text-sm leading-snug">
+          {isSecurityActivity(item.action) && item.clientInfo
+            ? item.clientInfo
+            : item.summary}
+        </p>
         {showActor && item.actorName ? (
           <p className="text-xs text-muted-foreground">By {item.actorName}</p>
         ) : null}
-        {isSecurityActivity(item.action) && item.clientInfo ? (
-          <p className="text-xs text-muted-foreground">Device: {item.clientInfo}</p>
+        {isSecurityActivity(item.action) && canCopyLocation && item.locationDetail ? (
+          <ActivityLocationInfo detail={item.locationDetail} />
+        ) : isSecurityActivity(item.action) && item.location ? (
+          <p className="text-xs text-muted-foreground">Location: {item.location}</p>
         ) : null}
         {loanHref ? (
           <Link href={loanHref} className="text-xs font-medium text-primary hover:underline">
@@ -125,6 +135,8 @@ type ActivityFeedProps = {
   admin?: boolean;
   /** Org-wide audit view → fetch all users' activity and show the actor. */
   orgWide?: boolean;
+  /** Admin view of a specific user's activity (manager-style tabs + location copy). */
+  userId?: string;
   embedded?: boolean;
   title?: string;
   description?: string;
@@ -133,18 +145,19 @@ type ActivityFeedProps = {
 export function ActivityFeed({
   admin = false,
   orgWide = false,
+  userId,
   embedded = false,
   title = "Activity",
   description = "Your recent actions and sign-in history.",
 }: ActivityFeedProps) {
   const tabs = getActivityTabs(admin);
+  const canCopyLocation = orgWide || Boolean(userId) || admin;
   const [activeTab, setActiveTab] = useState<ActivityTab>("all");
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const categoryFilter = activeTab;
 
@@ -152,7 +165,6 @@ export function ActivityFeed({
     setActivities(data.activities);
     setTotalPages(data.pagination.totalPages);
     setTotal(data.pagination.total);
-    setError(null);
   }, []);
 
   const refreshActivities = useCallback(async () => {
@@ -163,15 +175,16 @@ export function ActivityFeed({
         page,
         pageSize: 20,
         admin: orgWide,
+        userId,
         category: categoryFilter,
       });
       applyActivityData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load activity");
+      notifyError(err, "Failed to load activity");
     } finally {
       setLoading(false);
     }
-  }, [orgWide, applyActivityData, categoryFilter, page]);
+  }, [orgWide, userId, applyActivityData, categoryFilter, page]);
 
   useEffect(() => {
     let cancelled = false;
@@ -180,6 +193,7 @@ export function ActivityFeed({
       page,
       pageSize: 20,
       admin: orgWide,
+      userId,
       category: categoryFilter,
     })
       .then((data) => {
@@ -188,7 +202,7 @@ export function ActivityFeed({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load activity");
+        notifyError(err, "Failed to load activity");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -197,7 +211,7 @@ export function ActivityFeed({
     return () => {
       cancelled = true;
     };
-  }, [orgWide, applyActivityData, categoryFilter, page]);
+  }, [orgWide, userId, applyActivityData, categoryFilter, page]);
 
   function goToPage(nextPage: number) {
     setLoading(true);
@@ -246,9 +260,7 @@ export function ActivityFeed({
 
   const listContent = (
     <>
-      {error ? (
-        <div className="p-4 text-sm text-destructive sm:p-5">{error}</div>
-      ) : loading && activities.length === 0 ? (
+      {loading && activities.length === 0 ? (
         <div className="space-y-0 divide-y divide-border/60">
           {Array.from({ length: 5 }).map((_, index) => (
             <div key={index} className="flex gap-3 px-4 py-3 sm:px-5">
@@ -265,7 +277,12 @@ export function ActivityFeed({
       ) : (
         <div className="divide-y divide-border/60">
           {activities.map((item) => (
-            <ActivityRow key={item.id} item={item} showActor={orgWide} />
+            <ActivityRow
+              key={item.id}
+              item={item}
+              showActor={orgWide}
+              canCopyLocation={canCopyLocation}
+            />
           ))}
         </div>
       )}

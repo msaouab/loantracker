@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Pencil } from "lucide-react";
 import {
   AlertDialog,
@@ -17,13 +17,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import { dateParamToIso, formatDateParam } from "@/lib/dates";
 import { formatCurrency } from "@/lib/loans";
 import {
   updateLoanPayment,
   type LoanPayment,
 } from "@/lib/loan-payments-client";
+import { notifyError, notifySuccess } from "@/lib/toast";
 
 type EditPaymentDialogProps = {
   open: boolean;
@@ -54,22 +54,17 @@ export function EditPaymentDialog({
   const [paidAt, setPaidAt] = useState(() => paymentFormState(payment).paidAt);
   const [note, setNote] = useState(() => paymentFormState(payment).note);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const resetError = useCallback(() => setError(null), []);
-  useResetOnClose(open, resetError);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const parsedAmount = Math.round(Number(amount));
     if (!parsedAmount || parsedAmount <= 0) {
-      setError("Enter a valid payment amount");
+      notifyError(null, "Enter a valid payment amount");
       return;
     }
 
     setSaving(true);
-    setError(null);
 
     try {
       await updateLoanPayment(loanId, payment.id, {
@@ -79,12 +74,9 @@ export function EditPaymentDialog({
       });
       onOpenChange(false);
       onUpdated?.();
+      notifySuccess("Payment updated");
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Failed to update payment"
-      );
+      notifyError(submitError, "Failed to update payment");
     } finally {
       setSaving(false);
     }
@@ -135,9 +127,6 @@ export function EditPaymentDialog({
                 rows={2}
               />
             </div>
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : null}
           </div>
 
           <AlertDialogFooter>

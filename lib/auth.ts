@@ -59,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await logActivitySafe({
             userId: user.id,
             action: ActivityActions.AUTH_LOGIN,
-            summary: buildAuthSummary(ActivityActions.AUTH_LOGIN, clientInfo),
+            summary: buildAuthSummary(ActivityActions.AUTH_LOGIN),
             entityType: "session",
             clientInfo,
           });

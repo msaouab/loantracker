@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { RotateCcw } from "lucide-react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -33,7 +33,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TrustBadge } from "@/components/loans/trust-badge";
-import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import { formatCurrency } from "@/lib/loans";
 import {
   fetchDeletedLoans,
@@ -84,30 +83,25 @@ function DeletedLoansTableSkeleton() {
 export function DeletedLoans() {
   const [loans, setLoans] = useState<LoanRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loanToRestore, setLoanToRestore] = useState<LoanRecord | null>(null);
   const [restoring, setRestoring] = useState(false);
-  const [restoreError, setRestoreError] = useState<string | null>(null);
-
-  const resetRestoreError = useCallback(() => setRestoreError(null), []);
-  useResetOnClose(!!loanToRestore, resetRestoreError);
 
   const applyLoans = useCallback((data: Awaited<ReturnType<typeof fetchDeletedLoans>>) => {
     setLoans(data.loans);
-    setError(null);
+    setLoadFailed(false);
   }, []);
 
   const refreshLoans = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setLoadFailed(false);
 
     try {
       const data = await fetchDeletedLoans();
       applyLoans(data);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load deleted loans"
-      );
+      setLoadFailed(true);
+      notifyError(err, "Failed to load deleted loans");
     } finally {
       setLoading(false);
     }
@@ -123,9 +117,8 @@ export function DeletedLoans() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(
-          err instanceof Error ? err.message : "Failed to load deleted loans"
-        );
+        setLoadFailed(true);
+        notifyError(err, "Failed to load deleted loans");
       })
       .finally(() => {
         if (cancelled) return;
@@ -143,7 +136,6 @@ export function DeletedLoans() {
     }
 
     setRestoring(true);
-    setRestoreError(null);
 
     try {
       await restoreLoan(loanToRestore.id);
@@ -151,11 +143,9 @@ export function DeletedLoans() {
         current.filter((loan) => loan.id !== loanToRestore.id)
       );
       setLoanToRestore(null);
-      toast.success(`Restored loan for ${loanToRestore.clientName}`);
+      notifySuccess(`Restored loan for ${loanToRestore.clientName}`);
     } catch (err) {
-      setRestoreError(
-        err instanceof Error ? err.message : "Failed to restore loan"
-      );
+      notifyError(err, "Failed to restore loan");
     } finally {
       setRestoring(false);
     }
@@ -176,16 +166,15 @@ export function DeletedLoans() {
         </CardHeader>
         <CardContent className="p-0">
           <Separator />
-          {error ? (
-            <div className="space-y-3 px-4 py-6 sm:px-5">
-              <p className="text-sm text-destructive">{error}</p>
+          {loadFailed ? (
+            <div className="flex justify-end px-4 py-3 sm:px-5">
               <Button variant="outline" size="sm" onClick={() => void refreshLoans()}>
                 Try again
               </Button>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table className="min-w-[960px]">
+          ) : null}
+          <div className="overflow-x-auto">
+            <Table className="min-w-[960px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Client</TableHead>
@@ -265,7 +254,6 @@ export function DeletedLoans() {
                 </TableBody>
               </Table>
             </div>
-          )}
         </CardContent>
       </Card>
 
@@ -289,10 +277,6 @@ export function DeletedLoans() {
                 : "This will restore the loan and return it to your active loan list."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-
-          {restoreError ? (
-            <p className="text-sm text-destructive">{restoreError}</p>
-          ) : null}
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={restoring}>Cancel</AlertDialogCancel>

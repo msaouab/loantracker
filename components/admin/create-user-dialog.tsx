@@ -19,6 +19,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Switch } from "@/components/ui/switch";
 import { useResetOnClose } from "@/hooks/use-reset-on-close";
 import { createAdminUser } from "@/lib/admin-client";
+import { notifyError } from "@/lib/toast";
 
 type CreateUserDialogProps = {
   open: boolean;
@@ -41,12 +42,10 @@ export function CreateUserDialog({
 }: CreateUserDialogProps) {
   const [form, setForm] = useState(initialForm);
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const resetForm = useCallback(() => {
     setForm(initialForm);
-    setError(null);
     setFieldErrors({});
   }, []);
   useResetOnClose(open, resetForm);
@@ -91,7 +90,6 @@ export function CreateUserDialog({
     }
 
     setCreating(true);
-    setError(null);
 
     try {
       await createAdminUser({
@@ -103,11 +101,7 @@ export function CreateUserDialog({
       onOpenChange(false);
       onCreated?.();
     } catch (createError) {
-      setError(
-        createError instanceof Error
-          ? createError.message
-          : "Failed to create user"
-      );
+      notifyError(createError, "Failed to create user");
     } finally {
       setCreating(false);
     }
@@ -129,12 +123,6 @@ export function CreateUserDialog({
           </AlertDialogHeader>
 
           <div className="space-y-4 py-2">
-            {error ? (
-              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-
             <div className="space-y-2">
               <Label htmlFor="create-full-name">Full name</Label>
               <Input
