@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/copy-swagger-assets.mjs && prisma generate && next build",
+    "build": "prisma migrate deploy && node scripts/copy-swagger-assets.mjs && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

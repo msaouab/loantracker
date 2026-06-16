@@ -94,19 +94,23 @@ function mergeActivityMetadata(
 }
 
 function buildClientInfoLabel(
-  log: Pick<ActivityLogRecord, "ipAddress" | "userAgent" | "browser" | "metadata">
+  log: Pick<ActivityLogRecord, "ipAddress" | "userAgent" | "browser" | "metadata">,
+  options?: { includeIp?: boolean }
 ) {
   const device = deviceMetadataFromRecord(asMetadataRecord(log.metadata));
 
-  return formatClientInfo({
-    ipAddress: log.ipAddress,
-    userAgent: log.userAgent,
-    browser: log.browser ?? device.browser ?? null,
-    browserVersion: device.browserVersion ?? null,
-    os: device.os ?? null,
-    deviceType: device.deviceType ?? null,
-    language: device.language ?? null,
-  });
+  return formatClientInfo(
+    {
+      ipAddress: log.ipAddress,
+      userAgent: log.userAgent,
+      browser: log.browser ?? device.browser ?? null,
+      browserVersion: device.browserVersion ?? null,
+      os: device.os ?? null,
+      deviceType: device.deviceType ?? null,
+      language: device.language ?? null,
+    },
+    options
+  );
 }
 
 function buildSecuritySummaryForDisplay(log: ActivityLogRecord) {
@@ -115,8 +119,10 @@ function buildSecuritySummaryForDisplay(log: ActivityLogRecord) {
 
 export function serializeActivity(
   log: ActivityLogRecord,
-  loansById?: Map<string, { clientName: string; totalAmount: number }>
+  loansById?: Map<string, { clientName: string; totalAmount: number }>,
+  options?: { includeIp?: boolean }
 ) {
+  const includeIp = options?.includeIp ?? false;
   let metadata = asMetadataRecord(log.metadata);
 
   if (
@@ -147,10 +153,10 @@ export function serializeActivity(
     entityType: log.entityType,
     entityId: log.entityId,
     summary,
-    ipAddress: log.ipAddress,
+    ipAddress: includeIp ? log.ipAddress : null,
     userAgent: log.userAgent,
     browser: log.browser,
-    clientInfo: buildClientInfoLabel(log),
+    clientInfo: buildClientInfoLabel(log, { includeIp }),
     metadata,
     createdAt: log.createdAt.toISOString(),
     actorName: log.user?.fullName ?? null,
@@ -158,7 +164,10 @@ export function serializeActivity(
   };
 }
 
-async function serializeActivities(items: ActivityLogRecord[]) {
+async function serializeActivities(
+  items: ActivityLogRecord[],
+  options?: { includeIp?: boolean }
+) {
   const loanIds = [
     ...new Set(
       items
@@ -188,7 +197,7 @@ async function serializeActivities(items: ActivityLogRecord[]) {
     }
   }
 
-  return items.map((item) => serializeActivity(item, loansById));
+  return items.map((item) => serializeActivity(item, loansById, options));
 }
 
 export async function logActivity(input: LogActivityInput) {
@@ -237,6 +246,8 @@ type ListActivitiesOptions = {
   page: number;
   pageSize: number;
   category?: ActivityTab;
+  /** When true, security events include the anonymized IP (admin audit views only). */
+  includeIp?: boolean;
 };
 
 function buildCategoryFilter(category?: ActivityTab) {
@@ -269,7 +280,9 @@ export async function listActivitiesForUser(userId: string, options: ListActivit
   ]);
 
   return {
-    activities: await serializeActivities(items),
+    activities: await serializeActivities(items, {
+      includeIp: options.includeIp ?? false,
+    }),
     pagination: {
       page: options.page,
       pageSize: options.pageSize,
@@ -298,7 +311,7 @@ export async function listAllActivities(options: ListActivitiesOptions) {
   ]);
 
   return {
-    activities: await serializeActivities(items),
+    activities: await serializeActivities(items, { includeIp: true }),
     pagination: {
       page: options.page,
       pageSize: options.pageSize,

@@ -18,6 +18,7 @@ export const GET = withAdmin<{ id: string }>(async (req, _adminUserId, { params 
     page,
     pageSize,
     category,
+    includeIp: true,
   });
 
   return apiOk(result);

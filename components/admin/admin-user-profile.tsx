@@ -90,7 +90,8 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
     setPasswordLoading(true);
     setPasswordErrors({});
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const payload = {
       newPassword: String(formData.get("newPassword") ?? ""),
       confirmPassword: String(formData.get("confirmPassword") ?? ""),
@@ -99,7 +100,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
     try {
       await resetAdminUserPassword(user.id, payload);
       notifySuccess("Password reset. The user will need to sign in again.");
-      event.currentTarget.reset();
+      form.reset();
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError && error.fieldErrors) {
