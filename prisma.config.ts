@@ -2,7 +2,7 @@
 // npm install --save-dev prisma dotenv
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
-import { getDatabaseUrl } from "./lib/database-url";
+import { getDirectDatabaseUrl } from "./lib/database-url";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -10,7 +10,9 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "npx tsx prisma/seed.ts",
   },
+  // The CLI (migrate deploy / dev) uses a direct, non-pooled connection:
+  // advisory locks don't survive Neon's PgBouncer pooler (P1002 timeout).
   datasource: {
-    url: getDatabaseUrl(),
+    url: getDirectDatabaseUrl(),
   },
 });

@@ -18,7 +18,7 @@ export const authPaths: OpenAPIV3.PathsObject = {
         },
       },
       responses: {
-        "200": okResponse(ref("SuccessFlag"), "Account created (pending approval)"),
+        "201": okResponse(ref("SuccessFlag"), "Account created (pending approval)"),
         "400": errorResponses.ValidationError,
         "409": {
           description: "Email already registered",

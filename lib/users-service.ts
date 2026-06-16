@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { AppError, NotFoundError } from "@/lib/errors";
+import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
 import { bumpSessionVersion } from "@/lib/session-revocation";
 import { getAccountStatus } from "@/lib/users";
 import type { AdminCreateUserInput } from "@/lib/validations";
@@ -81,7 +81,9 @@ export async function listUsers() {
 export async function createUser(input: AdminCreateUserInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
-    throw new AppError("Email already registered", 409);
+    throw new ConflictError("Email already registered", {
+      email: ["Email already registered"],
+    });
   }
 
   const hashedPassword = await bcrypt.hash(input.password, 12);
@@ -148,7 +150,9 @@ export async function updateManagerProfileByAdmin(
     select: { id: true },
   });
   if (emailTaken) {
-    throw new AppError("Email already registered", 409);
+    throw new ConflictError("Email already registered", {
+      email: ["Email already registered"],
+    });
   }
 
   return prisma.user.update({
