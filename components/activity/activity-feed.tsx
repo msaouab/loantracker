@@ -34,7 +34,6 @@ import {
 } from "@/lib/activity-log";
 import { fetchActivities, type ActivityItem } from "@/lib/activity-client";
 import { ActivityEmptyState } from "@/components/activity/activity-empty-state";
-import { ActivityLocationInfo } from "@/components/activity/activity-location-info";
 import { cn } from "@/lib/utils";
 import { notifyError } from "@/lib/toast";
 
@@ -84,11 +83,9 @@ function ActivityActionIcon({
 function ActivityRow({
   item,
   showActor,
-  canCopyLocation,
 }: {
   item: ActivityItem;
   showActor: boolean;
-  canCopyLocation: boolean;
 }) {
   const loanHref =
     item.entityType === "loan" && item.entityId ? `/loans/${item.entityId}` : null;
@@ -114,11 +111,6 @@ function ActivityRow({
         </p>
         {showActor && item.actorName ? (
           <p className="text-xs text-muted-foreground">By {item.actorName}</p>
-        ) : null}
-        {isSecurityActivity(item.action) && canCopyLocation && item.locationDetail ? (
-          <ActivityLocationInfo detail={item.locationDetail} />
-        ) : isSecurityActivity(item.action) && item.location ? (
-          <p className="text-xs text-muted-foreground">Location: {item.location}</p>
         ) : null}
         {loanHref ? (
           <Link href={loanHref} className="text-xs font-medium text-primary hover:underline">
@@ -151,7 +143,6 @@ export function ActivityFeed({
   description = "Your recent actions and sign-in history.",
 }: ActivityFeedProps) {
   const tabs = getActivityTabs(admin);
-  const canCopyLocation = orgWide || Boolean(userId) || admin;
   const [activeTab, setActiveTab] = useState<ActivityTab>("all");
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [page, setPage] = useState(1);
@@ -277,12 +268,7 @@ export function ActivityFeed({
       ) : (
         <div className="divide-y divide-border/60">
           {activities.map((item) => (
-            <ActivityRow
-              key={item.id}
-              item={item}
-              showActor={orgWide}
-              canCopyLocation={canCopyLocation}
-            />
+            <ActivityRow key={item.id} item={item} showActor={orgWide} />
           ))}
         </div>
       )}

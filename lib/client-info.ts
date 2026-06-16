@@ -209,10 +209,7 @@ function formatBrowserLabel(
   return browserVersion ? `${browser} ${browserVersion}` : browser;
 }
 
-export function formatClientInfo(
-  clientInfo: Partial<ClientInfo>,
-  options?: { includeIp?: boolean }
-): string | null {
+export function formatClientInfo(clientInfo: Partial<ClientInfo>): string | null {
   const parts: string[] = [];
 
   const browserLabel = formatBrowserLabel(clientInfo.browser, clientInfo.browserVersion);
@@ -229,7 +226,7 @@ export function formatClientInfo(
   if (clientInfo.language) {
     parts.push(clientInfo.language);
   }
-  if (options?.includeIp && clientInfo.ipAddress) {
+  if (clientInfo.ipAddress) {
     parts.push(clientInfo.ipAddress);
   }
 

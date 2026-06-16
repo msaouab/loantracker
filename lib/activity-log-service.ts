@@ -13,16 +13,7 @@ import {
   isSecurityActivity,
   type ActivityTab,
 } from "@/lib/activity-log";
-import {
-  ensureIpLocation,
-  formatLocationLabel,
-  getCachedIpLocations,
-  isPublicIp,
-  toIpApiLocationPayload,
-  type IpLocation,
-} from "@/lib/ip-location";
 import { formatCurrency } from "@/lib/loans";
-import { after } from "next/server";
 
 export type LogActivityInput = {
   userId: string;
@@ -103,23 +94,19 @@ function mergeActivityMetadata(
 }
 
 function buildClientInfoLabel(
-  log: Pick<ActivityLogRecord, "ipAddress" | "userAgent" | "browser" | "metadata">,
-  options?: { includeIp?: boolean }
+  log: Pick<ActivityLogRecord, "ipAddress" | "userAgent" | "browser" | "metadata">
 ) {
   const device = deviceMetadataFromRecord(asMetadataRecord(log.metadata));
 
-  return formatClientInfo(
-    {
-      ipAddress: log.ipAddress,
-      userAgent: log.userAgent,
-      browser: log.browser ?? device.browser ?? null,
-      browserVersion: device.browserVersion ?? null,
-      os: device.os ?? null,
-      deviceType: device.deviceType ?? null,
-      language: device.language ?? null,
-    },
-    options
-  );
+  return formatClientInfo({
+    ipAddress: log.ipAddress,
+    userAgent: log.userAgent,
+    browser: log.browser ?? device.browser ?? null,
+    browserVersion: device.browserVersion ?? null,
+    os: device.os ?? null,
+    deviceType: device.deviceType ?? null,
+    language: device.language ?? null,
+  });
 }
 
 function buildSecuritySummaryForDisplay(log: ActivityLogRecord) {
@@ -128,9 +115,7 @@ function buildSecuritySummaryForDisplay(log: ActivityLogRecord) {
 
 export function serializeActivity(
   log: ActivityLogRecord,
-  loansById?: Map<string, { clientName: string; totalAmount: number }>,
-  locationsByIp?: Map<string, IpLocation>,
-  options?: { includeLocationDetail?: boolean }
+  loansById?: Map<string, { clientName: string; totalAmount: number }>
 ) {
   let metadata = asMetadataRecord(log.metadata);
 
@@ -151,19 +136,6 @@ export function serializeActivity(
     }
   }
 
-  const cachedLocation =
-    isSecurityActivity(log.action) && log.ipAddress
-      ? locationsByIp?.get(log.ipAddress)
-      : undefined;
-
-  const includeSensitive = options?.includeLocationDetail ?? false;
-  const locationDetail =
-    includeSensitive &&
-    cachedLocation &&
-    cachedLocation.status === "success"
-      ? toIpApiLocationPayload(cachedLocation)
-      : null;
-
   const summary = isSecurityActivity(log.action)
     ? buildSecuritySummaryForDisplay(log)
     : formatLoanActivitySummary(log.action, log.summary, metadata);
@@ -175,14 +147,10 @@ export function serializeActivity(
     entityType: log.entityType,
     entityId: log.entityId,
     summary,
-    ipAddress: includeSensitive ? log.ipAddress : null,
+    ipAddress: log.ipAddress,
     userAgent: log.userAgent,
     browser: log.browser,
-    clientInfo: buildClientInfoLabel(log, {
-      includeIp: includeSensitive && !locationDetail,
-    }),
-    location: cachedLocation ? formatLocationLabel(cachedLocation) : null,
-    locationDetail,
+    clientInfo: buildClientInfoLabel(log),
     metadata,
     createdAt: log.createdAt.toISOString(),
     actorName: log.user?.fullName ?? null,
@@ -190,10 +158,7 @@ export function serializeActivity(
   };
 }
 
-async function serializeActivities(
-  items: ActivityLogRecord[],
-  options?: { includeLocationDetail?: boolean }
-) {
+async function serializeActivities(items: ActivityLogRecord[]) {
   const loanIds = [
     ...new Set(
       items
@@ -223,15 +188,7 @@ async function serializeActivities(
     }
   }
 
-  const locationsByIp = await getCachedIpLocations(
-    items
-      .filter((item) => isSecurityActivity(item.action))
-      .map((item) => item.ipAddress)
-  );
-
-  return items.map((item) =>
-    serializeActivity(item, loansById, locationsByIp, options)
-  );
+  return items.map((item) => serializeActivity(item, loansById));
 }
 
 export async function logActivity(input: LogActivityInput) {
@@ -248,18 +205,6 @@ export async function logActivity(input: LogActivityInput) {
       browser: input.clientInfo?.browser ?? null,
     },
   });
-
-  // Geolocation is only shown for security events, so only those warm the cache.
-  // Done after the response (`after`) and cache-first, so it never adds latency
-  // and stays well under ip-api's free-tier rate limit.
-  const ip = input.clientInfo?.ipAddress;
-  if (ip && isSecurityActivity(input.action) && isPublicIp(ip)) {
-    try {
-      after(() => ensureIpLocation(ip));
-    } catch {
-      // `after()` requires a request scope; ignore if called outside one.
-    }
-  }
 }
 
 export async function logActivitySafe(input: LogActivityInput) {
@@ -292,7 +237,6 @@ type ListActivitiesOptions = {
   page: number;
   pageSize: number;
   category?: ActivityTab;
-  includeLocationDetail?: boolean;
 };
 
 function buildCategoryFilter(category?: ActivityTab) {
@@ -325,9 +269,7 @@ export async function listActivitiesForUser(userId: string, options: ListActivit
   ]);
 
   return {
-    activities: await serializeActivities(items, {
-      includeLocationDetail: options.includeLocationDetail ?? false,
-    }),
+    activities: await serializeActivities(items),
     pagination: {
       page: options.page,
       pageSize: options.pageSize,
@@ -356,7 +298,7 @@ export async function listAllActivities(options: ListActivitiesOptions) {
   ]);
 
   return {
-    activities: await serializeActivities(items, { includeLocationDetail: true }),
+    activities: await serializeActivities(items),
     pagination: {
       page: options.page,
       pageSize: options.pageSize,

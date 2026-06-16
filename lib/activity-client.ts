@@ -1,5 +1,4 @@
 import { request } from "@/lib/api-client";
-import type { IpApiLocationPayload } from "@/lib/ip-location-shared";
 
 export type ActivityItem = {
   id: string;
@@ -12,8 +11,6 @@ export type ActivityItem = {
   userAgent: string | null;
   browser: string | null;
   clientInfo: string | null;
-  location: string | null;
-  locationDetail: IpApiLocationPayload | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
   actorName: string | null;

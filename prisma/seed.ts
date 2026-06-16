@@ -11,9 +11,33 @@ import { anonymizeIp } from "../lib/ip-anonymization";
 import { computeRecoveredAt } from "../lib/loan-recovery";
 import { formatCurrency } from "../lib/loans";
 
-const DEMO_EMAIL = "demo@loantracker.local";
-const DEMO_PASSWORD = "Demo@123!";
-const DEMO_NAME = "Demo Manager";
+function getSeedUserConfig() {
+  const email = process.env.SEED_USER_EMAIL?.trim();
+  const password = process.env.SEED_USER_PASSWORD;
+  const fullName = process.env.SEED_USER_NAME?.trim() || "Demo Manager";
+
+  if (!email || !password) {
+    throw new Error(
+      "SEED_USER_EMAIL and SEED_USER_PASSWORD must be set in .env before running db:seed."
+    );
+  }
+
+  return { email, password, fullName };
+}
+
+function getSeedAdminConfig() {
+  const email = process.env.SEED_ADMIN_EMAIL?.trim();
+  const password = process.env.SEED_ADMIN_PASSWORD;
+  const fullName = process.env.SEED_ADMIN_NAME?.trim() || "Demo Admin";
+
+  if (!email || !password) {
+    throw new Error(
+      "SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set in .env before running db:seed."
+    );
+  }
+
+  return { email, password, fullName };
+}
 
 const LOAN_COUNT = 20;
 const DELETED_LOAN_COUNT = 3;
@@ -22,39 +46,6 @@ const DELETED_LOAN_COUNT = 3;
 const SEED_IP_CASA = anonymizeIp("203.0.113.45");
 const SEED_IP_RABAT = anonymizeIp("198.51.100.82");
 const SEED_IP_LOCAL = "127.0.0.1";
-
-const SEED_IP_LOCATIONS = [
-  {
-    ip: SEED_IP_CASA,
-    country: "Morocco",
-    countryCode: "MA",
-    region: "Casablanca-Settat",
-    regionCode: "06",
-    city: "Casablanca",
-    zip: "20000",
-    lat: 33.5731,
-    lon: -7.5898,
-    timezone: "Africa/Casablanca",
-    isp: "Maroc Telecom",
-    org: "IAM",
-    asn: "AS6713 Office National des Postes et Telecommunications ONPT (Maroc Telecom)",
-  },
-  {
-    ip: SEED_IP_RABAT,
-    country: "Morocco",
-    countryCode: "MA",
-    region: "Rabat-Sale-Kenitra",
-    regionCode: "04",
-    city: "Rabat",
-    zip: "10000",
-    lat: 34.0209,
-    lon: -6.8416,
-    timezone: "Africa/Casablanca",
-    isp: "INWI",
-    org: "Wana Corporate",
-    asn: "AS36884 Wana Corporate",
-  },
-] as const;
 
 const DEMO_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -185,46 +176,6 @@ function authActivityFields(
   };
 }
 
-async function seedIpLocations(prisma: PrismaClient) {
-  for (const loc of SEED_IP_LOCATIONS) {
-    await prisma.ipLocation.upsert({
-      where: { ip: loc.ip },
-      update: {
-        status: "success",
-        country: loc.country,
-        countryCode: loc.countryCode,
-        region: loc.region,
-        regionCode: loc.regionCode,
-        city: loc.city,
-        zip: loc.zip,
-        lat: loc.lat,
-        lon: loc.lon,
-        timezone: loc.timezone,
-        isp: loc.isp,
-        org: loc.org,
-        asn: loc.asn,
-        fetchedAt: new Date(),
-      },
-      create: {
-        ip: loc.ip,
-        status: "success",
-        country: loc.country,
-        countryCode: loc.countryCode,
-        region: loc.region,
-        regionCode: loc.regionCode,
-        city: loc.city,
-        zip: loc.zip,
-        lat: loc.lat,
-        lon: loc.lon,
-        timezone: loc.timezone,
-        isp: loc.isp,
-        org: loc.org,
-        asn: loc.asn,
-      },
-    });
-  }
-}
-
 async function seedActivityLogs(prisma: PrismaClient, logs: ActivitySeed[]) {
   if (logs.length === 0) {
     return;
@@ -249,26 +200,61 @@ async function seedActivityLogs(prisma: PrismaClient, logs: ActivitySeed[]) {
 }
 
 async function main() {
+  const { email: demoEmail, password: demoPasswordPlain, fullName: demoName } =
+    getSeedUserConfig();
+  const {
+    email: adminEmail,
+    password: adminPasswordPlain,
+    fullName: adminName,
+  } = getSeedAdminConfig();
+
   const adapter = new PrismaPg({
     connectionString: getDatabaseUrl(),
   });
   const prisma = new PrismaClient({ adapter });
 
-  const demoPassword = await bcrypt.hash(DEMO_PASSWORD, 12);
+  const [demoPasswordHash, adminPasswordHash] = await Promise.all([
+    bcrypt.hash(demoPasswordPlain, 12),
+    bcrypt.hash(adminPasswordPlain, 12),
+  ]);
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      fullName: adminName,
+      isAdmin: true,
+      isActivated: true,
+      isFrozen: false,
+      lastLoginAt: daysAgo(0, 9),
+    },
+    create: {
+      email: adminEmail,
+      password: adminPasswordHash,
+      fullName: adminName,
+      isAdmin: true,
+      isActivated: true,
+      isFrozen: false,
+      lastLoginAt: daysAgo(0, 9),
+    },
+  });
+
+  await prisma.activityLog.deleteMany({
+    where: { userId: admin.id },
+  });
 
   const demo = await prisma.user.upsert({
-    where: { email: DEMO_EMAIL },
+    where: { email: demoEmail },
     update: {
-      fullName: DEMO_NAME,
+      fullName: demoName,
       isAdmin: false,
       isActivated: true,
       isFrozen: false,
       lastLoginAt: daysAgo(0, 8, 30),
     },
     create: {
-      email: DEMO_EMAIL,
-      password: demoPassword,
-      fullName: DEMO_NAME,
+      email: demoEmail,
+      password: demoPasswordHash,
+      fullName: demoName,
       isActivated: true,
       isFrozen: false,
       lastLoginAt: daysAgo(0, 8, 30),
@@ -358,6 +344,30 @@ async function main() {
 
   const activityLogs: ActivitySeed[] = [
     {
+      userId: admin.id,
+      action: ActivityActions.AUTH_LOGIN,
+      entityType: "session",
+      createdAt: daysAgo(0, 9, 15),
+      ...authActivityFields(ActivityActions.AUTH_LOGIN, {
+        ipAddress: SEED_IP_LOCAL,
+        userAgent: DEMO_USER_AGENT,
+        browser: "Chrome",
+        browserVersion: "120",
+        os: "macOS",
+        deviceType: "desktop",
+        language: "en-US",
+      }),
+    },
+    {
+      userId: admin.id,
+      action: ActivityActions.USER_APPROVED,
+      summary: `Approved account for ${demoName}`,
+      entityType: "user",
+      entityId: demo.id,
+      metadata: { email: demoEmail },
+      createdAt: daysAgo(14, 8),
+    },
+    {
       userId: demo.id,
       action: ActivityActions.AUTH_LOGIN,
       entityType: "session",
@@ -390,7 +400,7 @@ async function main() {
     {
       userId: demo.id,
       action: ActivityActions.PROFILE_UPDATED,
-      summary: `Changed display name to "${DEMO_NAME}"`,
+      summary: `Changed display name to "${demoName}"`,
       entityType: "profile",
       metadata: { previousName: "Demo User" },
       createdAt: daysAgo(12, 10),
@@ -483,7 +493,6 @@ async function main() {
     },
   ];
 
-  await seedIpLocations(prisma);
   await seedActivityLogs(prisma, activityLogs);
 
   const activeLoans = demoLoans.filter(
@@ -492,17 +501,21 @@ async function main() {
 
   console.log("Database seeded successfully.\n");
 
-  console.log("Demo manager:");
-  console.log(`  Email:    ${DEMO_EMAIL}`);
-  console.log(`  Password: ${DEMO_PASSWORD}`);
+  console.log("Demo admin:");
+  console.log(`  Email:    ${adminEmail}`);
+  console.log("  Password: (from SEED_ADMIN_PASSWORD in .env)");
+
+  console.log("\nDemo manager:");
+  console.log(`  Email:    ${demoEmail}`);
+  console.log("  Password: (from SEED_USER_PASSWORD in .env)");
 
   console.log("\nSeeded data summary:");
+  console.log(`  Users:         2 (1 admin, 1 manager)`);
   console.log(`  Loans:         ${LOAN_COUNT}`);
   console.log(`  Active:        ${activeLoans.length}`);
   console.log(`  Recovered:     ${recoveredLoans.length}`);
   console.log(`  Soft-deleted:  ${deletedLoans.length}`);
   console.log(`  Activity logs: ${activityLogs.length}`);
-  console.log(`  IP locations:  ${SEED_IP_LOCATIONS.length}`);
 }
 
 main()

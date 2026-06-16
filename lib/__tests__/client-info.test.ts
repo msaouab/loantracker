@@ -44,7 +44,7 @@ describe("client-info parsers", () => {
     expect(parseLanguage("fr-MA,fr;q=0.9,en-US;q=0.8")).toBe("fr-MA");
   });
 
-  it("formats a full device label", () => {
+  it("formats a full device label including the anonymized IP", () => {
     expect(
       formatClientInfo({
         browser: "Chrome",
@@ -54,19 +54,6 @@ describe("client-info parsers", () => {
         language: "fr-MA",
         ipAddress: "203.0.113.0",
       })
-    ).toBe("Chrome 120 · macOS · Desktop · fr-MA");
-    expect(
-      formatClientInfo(
-        {
-          browser: "Chrome",
-          browserVersion: "120",
-          os: "macOS",
-          deviceType: "desktop",
-          language: "fr-MA",
-          ipAddress: "203.0.113.0",
-        },
-        { includeIp: true }
-      )
     ).toBe("Chrome 120 · macOS · Desktop · fr-MA · 203.0.113.0");
   });
 });
