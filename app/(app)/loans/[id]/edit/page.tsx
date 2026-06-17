@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { LoanForm, type LoanFormValues } from "@/components/forms/loan-form";
 import { LoanFormSkeleton } from "@/components/loans/loan-skeletons";
@@ -20,19 +20,17 @@ export default function EditLoanPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id: loanId } = use(params);
   const router = useRouter();
   const t = useTranslations("loans");
-  const [loanId, setLoanId] = useState<string | null>(null);
   const [loan, setLoan] = useState<LoanDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadLoan() {
-      const { id } = await params;
-      setLoanId(id);
 
       try {
-        const data = await fetchLoan(id);
+        const data = await fetchLoan(loanId);
         setLoan({
           id: data.loan.id,
           clientName: data.loan.clientName,
@@ -52,7 +50,7 @@ export default function EditLoanPage({
     }
 
     loadLoan();
-  }, [params, router, t]);
+  }, [loanId, router, t]);
 
   if (loading || !loan || !loanId) {
     return <LoanFormSkeleton />;
@@ -69,7 +67,7 @@ export default function EditLoanPage({
         <LoanForm
           initialValues={loan}
           submitLabel={t("saveChanges")}
-          cancelHref={`/loans/${loanId}`}
+          cancelHref="/loans"
           amountPaidReadOnly
           onSubmit={async (values) => {
             await updateLoan(loanId, {

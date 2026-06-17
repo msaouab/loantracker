@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
@@ -18,6 +18,7 @@ export default function LoanDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
   const t = useTranslations("loans");
   const tc = useTranslations("common");
@@ -28,8 +29,7 @@ export default function LoanDetailPage({
 
   useEffect(() => {
     async function loadLoan() {
-      const { id } = await params;
-
+      
       try {
         const data = await fetchLoan(id);
         setLoan(data.loan);
@@ -42,7 +42,7 @@ export default function LoanDetailPage({
     }
 
     loadLoan();
-  }, [params, router]);
+  }, [id, router]);
 
   if (loading || !loan) {
     return <LoanDetailSkeleton />;

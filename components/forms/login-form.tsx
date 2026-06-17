@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
@@ -12,14 +12,11 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { notifyError, notifyInfo } from "@/lib/toast";
 
-export function LoginForm({
-  registered = false,
-  passwordChanged = false,
-}: {
-  registered?: boolean;
-  passwordChanged?: boolean;
-}) {
+export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get("registered") === "true";
+  const passwordChanged = searchParams.get("passwordChanged") === "true";
   const t = useTranslations("auth");
   const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
