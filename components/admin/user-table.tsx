@@ -235,12 +235,16 @@ export function UserTable() {
                         <TableCell className="font-medium">
                           <span className="inline-flex items-center gap-2">
                             <PresenceIndicator lastSeenAt={user.lastSeenAt} showTooltip={false} />
-                            <Link
-                              href={`/admin/users/${user.id}`}
-                              className="hover:text-primary hover:underline"
-                            >
-                              {user.fullName}
-                            </Link>
+                            {user.isAdmin ? (
+                              <span>{user.fullName}</span>
+                            ) : (
+                              <Link
+                                href={`/admin/users/${user.id}`}
+                                className="hover:text-primary hover:underline"
+                              >
+                                {user.fullName}
+                              </Link>
+                            )}
                           </span>
                           {user.isAdmin ? (
                             <Badge variant="outline" className="ms-2">

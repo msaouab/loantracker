@@ -94,7 +94,12 @@
     "highlightInsightsDescription": "Monitor recoveries and outstanding balances instantly.",
     "highlightSecureTitle": "Simple & secure",
     "highlightSecureDescription": "Built for managers who need clarity without complexity.",
-    "footerTagline": "Built for managers who want simplicity without sacrificing insight."
+    "footerTagline": "Built for managers who want simplicity without sacrificing insight.",
+    "passwordStrengthWeak": "Weak password",
+    "passwordStrengthMedium": "Medium password",
+    "passwordStrengthStrong": "Strong password",
+    "passwordMatch": "Passwords match",
+    "passwordMismatch": "Passwords do not match"
   },
   "dashboard": {
     "title": "Dashboard",

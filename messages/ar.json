@@ -94,7 +94,12 @@
     "highlightInsightsDescription": "راقب التحصيلات والأرصدة المستحقة فوراً.",
     "highlightSecureTitle": "بسيط وآمن",
     "highlightSecureDescription": "مصمم للمديرين الذين يحتاجون وضوحاً دون تعقيد.",
-    "footerTagline": "مصمم للمديرين الذين يريدون البساطة دون التضحية بالرؤية."
+    "footerTagline": "مصمم للمديرين الذين يريدون البساطة دون التضحية بالرؤية.",
+    "passwordStrengthWeak": "كلمة مرور ضعيفة",
+    "passwordStrengthMedium": "كلمة مرور متوسطة",
+    "passwordStrengthStrong": "كلمة مرور قوية",
+    "passwordMatch": "كلمتا المرور متطابقتان",
+    "passwordMismatch": "كلمتا المرور غير متطابقتين"
   },
   "dashboard": {
     "title": "لوحة التحكم",

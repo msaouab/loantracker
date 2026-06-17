@@ -41,6 +41,7 @@ export function SettingsForm({
 
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string[]>>({});
+  const [newPassword, setNewPassword] = useState("");
 
   async function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -142,7 +143,14 @@ export function SettingsForm({
 
             <div className="space-y-2">
               <Label htmlFor="newPassword">{t("newPassword")}</Label>
-              <PasswordInput id="newPassword" name="newPassword" minLength={8} required />
+              <PasswordInput
+                id="newPassword"
+                name="newPassword"
+                minLength={8}
+                required
+                showStrength
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
               <FieldError message={passwordErrors.newPassword?.[0]} />
             </div>
 
@@ -153,6 +161,7 @@ export function SettingsForm({
                 name="confirmPassword"
                 minLength={8}
                 required
+                matchWith={newPassword}
               />
               <FieldError message={passwordErrors.confirmPassword?.[0]} />
             </div>

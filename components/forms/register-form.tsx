@@ -17,6 +17,7 @@ export function RegisterForm() {
   const t = useTranslations("auth");
   const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -65,7 +66,14 @@ export function RegisterForm() {
 
       <div className="space-y-2">
         <Label htmlFor="password">{tCommon("password")}</Label>
-        <PasswordInput id="password" name="password" minLength={8} required />
+        <PasswordInput
+          id="password"
+          name="password"
+          minLength={8}
+          required
+          showStrength
+          onChange={(event) => setPassword(event.target.value)}
+        />
         {fieldErrors.password?.[0] ? (
           <p className="text-sm text-destructive">{fieldErrors.password[0]}</p>
         ) : null}
@@ -78,6 +86,7 @@ export function RegisterForm() {
           name="confirmPassword"
           minLength={8}
           required
+          matchWith={password}
         />
         {fieldErrors.confirmPassword?.[0] ? (
           <p className="text-sm text-destructive">{fieldErrors.confirmPassword[0]}</p>

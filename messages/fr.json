@@ -94,7 +94,12 @@
     "highlightInsightsDescription": "Surveillez les récupérations et les soldes impayés instantanément.",
     "highlightSecureTitle": "Simple et sécurisé",
     "highlightSecureDescription": "Conçu pour les gestionnaires qui veulent de la clarté sans complexité.",
-    "footerTagline": "Conçu pour les gestionnaires qui veulent la simplicité sans sacrifier la visibilité."
+    "footerTagline": "Conçu pour les gestionnaires qui veulent la simplicité sans sacrifier la visibilité.",
+    "passwordStrengthWeak": "Mot de passe faible",
+    "passwordStrengthMedium": "Mot de passe moyen",
+    "passwordStrengthStrong": "Mot de passe fort",
+    "passwordMatch": "Les mots de passe correspondent",
+    "passwordMismatch": "Les mots de passe ne correspondent pas"
   },
   "dashboard": {
     "title": "Tableau de bord",

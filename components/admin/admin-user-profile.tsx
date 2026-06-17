@@ -70,6 +70,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
   const [profileErrors, setProfileErrors] = useState<Record<string, string[]>>({});
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string[]>>({});
+  const [newPassword, setNewPassword] = useState("");
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -273,7 +274,14 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="newPassword">{t("newPassword")}</Label>
-              <PasswordInput id="newPassword" name="newPassword" minLength={8} required />
+              <PasswordInput
+                id="newPassword"
+                name="newPassword"
+                minLength={8}
+                required
+                showStrength
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
               <FieldError message={passwordErrors.newPassword?.[0]} />
             </div>
 
@@ -286,6 +294,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
                 name="confirmPassword"
                 minLength={8}
                 required
+                matchWith={newPassword}
               />
               <FieldError message={passwordErrors.confirmPassword?.[0]} />
             </div>
