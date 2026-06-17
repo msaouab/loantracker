@@ -1,10 +1,9 @@
 <div align="center">
-<br />
 
 # 💰 Loan Tracker
 
 <img src="docs/images/readme-banner.png" alt="Wooden letter tiles spelling CREDIT on a table" width="100%" />
-
+<br />
 **A modern web app to digitize loan management — track clients, record payments, and monitor portfolio health in one place.**
 
 <br />
