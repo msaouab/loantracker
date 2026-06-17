@@ -202,4 +202,22 @@
     background-size: 40px 40px;
     mask-image: radial-gradient(circle at center, black, transparent 80%);
   }
+
+  .auth-signature {
+    font-family: "Segoe Script", "Bradley Hand", "Brush Script MT", cursive;
+    letter-spacing: 0.02em;
+  }
+
+  .auth-signature-footer {
+    color: var(--muted-foreground);
+  }
+
+  .auth-signature-footer .auth-signature {
+    color: var(--foreground);
+    opacity: 0.75;
+  }
+
+  .dark .auth-signature-footer .auth-signature {
+    opacity: 0.85;
+  }
 }

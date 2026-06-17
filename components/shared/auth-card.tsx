@@ -44,7 +44,7 @@ export function AuthCard({
 
   return (
     <div className="auth-shell relative min-h-screen lg:grid lg:grid-cols-2">
-      <div className="absolute end-4 top-4 z-20 flex items-center gap-2 sm:end-6 sm:top-6">
+      <div className="absolute inset-e-4 top-4 z-20 flex items-center gap-2 sm:inset-e-6 sm:top-6">
         <GuestLanguageSwitcher />
         <ThemeToggle />
       </div>
@@ -53,9 +53,9 @@ export function AuthCard({
         <div className="absolute inset-0 bg-[#0b1220]" />
         <div className="absolute inset-0 bg-linear-to-br from-[#1d4ed8] via-[#2563eb] to-[#0f766e] opacity-95" />
         <div className="auth-brand-grid absolute inset-0 opacity-30" />
-        <div className="absolute -start-20 top-1/4 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
-        <div className="absolute -end-24 top-0 h-80 w-80 rounded-full bg-white/15 blur-3xl" />
-        <div className="absolute bottom-0 start-1/3 h-64 w-64 rounded-full bg-emerald-300/15 blur-3xl" />
+        <div className="absolute -inset-s-20 top-1/4 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="absolute -inset-e-24 top-0 h-80 w-80 rounded-full bg-white/15 blur-3xl" />
+        <div className="absolute bottom-0 inset-s-1/3 h-64 w-64 rounded-full bg-emerald-300/15 blur-3xl" />
 
         <div className="relative z-10 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/25 backdrop-blur-sm">
@@ -74,7 +74,7 @@ export function AuthCard({
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-4xl font-semibold leading-[1.1] tracking-tight xl:text-5xl">
+            <h2 className="text-4xl font-semibold leading-[1.1] tracking-tight text-white xl:text-5xl">
               {t("heroTitle")}
             </h2>
             <p className="max-w-md text-base leading-relaxed text-white/80">
@@ -108,7 +108,7 @@ export function AuthCard({
         </p>
       </div>
 
-      <div className="flex min-h-screen w-full items-center justify-center px-4 py-16 sm:px-8 lg:px-12">
+      <div className="relative flex min-h-screen w-full items-center justify-center px-4 py-16 pb-20 sm:px-8 sm:pb-16 lg:px-12">
         <Card className="glass-card mx-auto w-full max-w-md border-0">
           <CardHeader className="space-y-3 pb-2 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary lg:hidden">
@@ -125,6 +125,14 @@ export function AuthCard({
           </CardHeader>
           <CardContent className="mx-auto w-full max-w-sm pt-2">{children}</CardContent>
         </Card>
+
+        <p
+          className="auth-signature-footer pointer-events-none absolute inset-x-0 bottom-4 z-20 pb-[max(0px,env(safe-area-inset-bottom))] text-center text-sm"
+          aria-hidden="true"
+        >
+          Developed by{" "}
+          <span className="auth-signature text-lg">Mohamed Saouab</span>
+        </p>
       </div>
     </div>
   );
