@@ -1,18 +1,29 @@
 "use client";
 
+import { Languages } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useTransition } from "react";
-import { LanguageIconPicker } from "@/components/shared/language-icon-picker";
-import type { AppLocale } from "@/lib/locale";
+import { useMemo, useTransition } from "react";
+import { Dropdown } from "@/components/ui/dropdown";
+import { LOCALE_LABELS, LOCALES, type AppLocale } from "@/lib/locale";
 import { notifyError, notifySuccess } from "@/lib/toast";
 
 /** Language picker for unauthenticated pages (cookie only, no API). */
 export function GuestLanguageSwitcher() {
   const ts = useTranslations("settings");
+  const tc = useTranslations("common");
   const locale = useLocale() as AppLocale;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+
+  const options = useMemo(
+    () =>
+      LOCALES.map((code) => ({
+        value: code,
+        label: LOCALE_LABELS[code],
+      })),
+    []
+  );
 
   async function handleChange(nextLocale: AppLocale) {
     if (nextLocale === locale || pending) return;
@@ -31,10 +42,16 @@ export function GuestLanguageSwitcher() {
   }
 
   return (
-    <LanguageIconPicker
+    <Dropdown
+      trigger="icon"
+      icon={Languages}
+      align="end"
+      matchTriggerWidth={false}
       value={locale}
-      onChange={handleChange}
+      options={options}
       disabled={pending}
+      aria-label={tc("language")}
+      onValueChange={(next) => handleChange(next as AppLocale)}
     />
   );
 }

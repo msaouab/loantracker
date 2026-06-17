@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { DropdownMultiSelect } from "@/components/ui/dropdown-multi-select";
+import { Dropdown } from "@/components/ui/dropdown";
 import { Input } from "@/components/ui/input";
 import type { AdminUser } from "@/lib/admin-client";
 import { cn } from "@/lib/utils";
@@ -71,7 +71,8 @@ export function ActivityFilters({
       />
 
       <div className="min-w-0 flex-1 sm:max-w-56">
-        <DropdownMultiSelect
+        <Dropdown
+          mode="multiple"
           id="activity-user-filter"
           aria-label={t("filterUser")}
           values={values.actorUserIds}
@@ -86,7 +87,7 @@ export function ActivityFilters({
             }
 
             if (selected.length === 1) {
-              return selected[0].label;
+              return String(selected[0].label);
             }
 
             return t("filterUsersSelected", { count: selected.length });

@@ -260,9 +260,9 @@ export function UserTable() {
                         <TableCell>
                           {formatDate(user.createdAt, locale)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="p-0">
                           <PresenceTooltip lastSeenAt={user.lastSeenAt}>
-                            <span className="cursor-default">
+                            <span className="block w-full cursor-default p-2 whitespace-nowrap">
                               {user.lastLoginAt
                                 ? formatDateTime(user.lastLoginAt, locale)
                                 : tc("never")}

@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DropdownSelect } from "@/components/ui/dropdown-select";
+import { Dropdown } from "@/components/ui/dropdown";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -437,7 +437,7 @@ export function LoanTable({
               >
                 {t("rowsPerPage")}
               </span>
-              <DropdownSelect
+              <Dropdown
                 id="loan-page-size"
                 aria-label={t("rowsPerPage")}
                 value={String(pageSize)}

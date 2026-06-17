@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DropdownSelect } from "@/components/ui/dropdown-select";
+import { Dropdown } from "@/components/ui/dropdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoanPaymentHistory } from "@/components/loans/loan-payment-history";
 import { TrustBadge } from "@/components/loans/trust-badge";
@@ -64,7 +64,7 @@ export function LoanMobileSort({
       <span className="shrink-0 text-sm text-muted-foreground">
         {t("sortLabel")}
       </span>
-      <DropdownSelect
+      <Dropdown
         id="loan-mobile-sort"
         aria-label={t("sortLabel")}
         value={sortBy}
