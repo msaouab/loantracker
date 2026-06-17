@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import { notifyError } from "@/lib/toast";
 
 export function RegisterForm() {
   const router = useRouter();
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
@@ -35,7 +38,7 @@ export function RegisterForm() {
       if (submitError instanceof ApiRequestError && submitError.fieldErrors) {
         setFieldErrors(submitError.fieldErrors);
       } else {
-        notifyError(submitError, "Registration failed");
+        notifyError(submitError, t("registrationFailed"));
       }
     } finally {
       setLoading(false);
@@ -45,7 +48,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="fullName">Full Name</Label>
+        <Label htmlFor="fullName">{tCommon("fullName")}</Label>
         <Input id="fullName" name="fullName" required />
         {fieldErrors.fullName?.[0] ? (
           <p className="text-sm text-destructive">{fieldErrors.fullName[0]}</p>
@@ -53,7 +56,7 @@ export function RegisterForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{tCommon("email")}</Label>
         <Input id="email" name="email" type="email" required />
         {fieldErrors.email?.[0] ? (
           <p className="text-sm text-destructive">{fieldErrors.email[0]}</p>
@@ -61,7 +64,7 @@ export function RegisterForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{tCommon("password")}</Label>
         <PasswordInput id="password" name="password" minLength={8} required />
         {fieldErrors.password?.[0] ? (
           <p className="text-sm text-destructive">{fieldErrors.password[0]}</p>
@@ -69,7 +72,7 @@ export function RegisterForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <Label htmlFor="confirmPassword">{tCommon("confirmPassword")}</Label>
         <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
@@ -82,13 +85,13 @@ export function RegisterForm() {
       </div>
 
       <Button type="submit" className="h-10 w-full" size="lg" disabled={loading}>
-        {loading ? "Creating account..." : "Create account"}
+        {loading ? t("creatingAccount") : t("createAccount")}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
+        {t("alreadyHaveAccount")}{" "}
         <Link href="/auth/login" className="font-medium text-primary hover:underline">
-          Sign in
+          {t("signIn")}
         </Link>
       </p>
     </form>

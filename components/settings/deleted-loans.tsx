@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import { RotateCcw } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import {
@@ -33,7 +34,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TrustBadge } from "@/components/loans/trust-badge";
+import { formatDate, getDateFnsLocale } from "@/lib/format";
 import { formatCurrency } from "@/lib/loans";
+import type { AppLocale } from "@/lib/locale";
 import {
   fetchDeletedLoans,
   restoreLoan,
@@ -71,8 +74,8 @@ function DeletedLoansTableSkeleton() {
           <TableCell>
             <Skeleton className="h-4 w-24" />
           </TableCell>
-          <TableCell className="text-right">
-            <Skeleton className="ml-auto h-8 w-20 rounded-lg" />
+          <TableCell className="text-end">
+            <Skeleton className="ms-auto h-8 w-20 rounded-lg" />
           </TableCell>
         </TableRow>
       ))}
@@ -81,6 +84,9 @@ function DeletedLoansTableSkeleton() {
 }
 
 export function DeletedLoans() {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [loans, setLoans] = useState<LoanRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -101,11 +107,11 @@ export function DeletedLoans() {
       applyLoans(data);
     } catch (err) {
       setLoadFailed(true);
-      notifyError(err, "Failed to load deleted loans");
+      notifyError(err, t("failedLoadDeleted"));
     } finally {
       setLoading(false);
     }
-  }, [applyLoans]);
+  }, [applyLoans, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +124,7 @@ export function DeletedLoans() {
       .catch((err: unknown) => {
         if (cancelled) return;
         setLoadFailed(true);
-        notifyError(err, "Failed to load deleted loans");
+        notifyError(err, t("failedLoadDeleted"));
       })
       .finally(() => {
         if (cancelled) return;
@@ -128,7 +134,7 @@ export function DeletedLoans() {
     return () => {
       cancelled = true;
     };
-  }, [applyLoans]);
+  }, [applyLoans, t]);
 
   async function handleConfirmRestore() {
     if (!loanToRestore) {
@@ -143,9 +149,9 @@ export function DeletedLoans() {
         current.filter((loan) => loan.id !== loanToRestore.id)
       );
       setLoanToRestore(null);
-      notifySuccess(`Restored loan for ${loanToRestore.clientName}`);
+      notifySuccess(t("restoredNamed", { clientName: loanToRestore.clientName }));
     } catch (err) {
-      notifyError(err, "Failed to restore loan");
+      notifyError(err, t("failedRestore"));
     } finally {
       setRestoring(false);
     }
@@ -158,18 +164,15 @@ export function DeletedLoans() {
         className="surface-card border-0 ring-1 ring-foreground/10"
       >
         <CardHeader>
-          <CardTitle>Deleted loans</CardTitle>
-          <CardDescription>
-            Deleted loans are kept for 30 days, then permanently removed. Restore
-            them here with their full payment history before that window ends.
-          </CardDescription>
+          <CardTitle>{t("deletedLoans")}</CardTitle>
+          <CardDescription>{t("deletedLoansDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Separator />
           {loadFailed ? (
             <div className="flex justify-end px-4 py-3 sm:px-5">
               <Button variant="outline" size="sm" onClick={() => void refreshLoans()}>
-                Try again
+                {tc("tryAgain")}
               </Button>
             </div>
           ) : null}
@@ -177,15 +180,15 @@ export function DeletedLoans() {
             <Table className="min-w-[960px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Paid</TableHead>
-                    <TableHead>Outstanding</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Trust</TableHead>
-                    <TableHead>Deleted</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t("columnClient")}</TableHead>
+                    <TableHead>{tc("description")}</TableHead>
+                    <TableHead>{t("columnTotal")}</TableHead>
+                    <TableHead>{t("columnPaid")}</TableHead>
+                    <TableHead>{t("columnOutstanding")}</TableHead>
+                    <TableHead>{tc("date")}</TableHead>
+                    <TableHead>{t("columnTrust")}</TableHead>
+                    <TableHead>{t("columnDeleted")}</TableHead>
+                    <TableHead className="text-end">{tc("actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -197,7 +200,7 @@ export function DeletedLoans() {
                         colSpan={9}
                         className="h-24 text-center text-muted-foreground"
                       >
-                        No loans deleted in the last 30 days.
+                        {t("noDeleted")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -209,11 +212,11 @@ export function DeletedLoans() {
                         <TableCell className="max-w-[200px] truncate text-muted-foreground">
                           {loan.description ?? "—"}
                         </TableCell>
-                        <TableCell>{formatCurrency(loan.totalAmount)}</TableCell>
+                        <TableCell>{formatCurrency(loan.totalAmount, locale)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-success tabular-nums">
-                              {formatCurrency(loan.amountPaid)}
+                              {formatCurrency(loan.amountPaid, locale)}
                             </span>
                             {loan.paymentCount && loan.paymentCount > 0 ? (
                               <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
@@ -223,10 +226,10 @@ export function DeletedLoans() {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium text-destructive tabular-nums">
-                          {formatCurrency(loan.outstanding)}
+                          {formatCurrency(loan.outstanding, locale)}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(loan.loanDate), "MMM d, yyyy")}
+                          {formatDate(loan.loanDate, locale)}
                         </TableCell>
                         <TableCell>
                           <TrustBadge trusted={loan.clientTrust} />
@@ -235,17 +238,18 @@ export function DeletedLoans() {
                           {loan.deletedAt
                             ? formatDistanceToNow(new Date(loan.deletedAt), {
                                 addSuffix: true,
+                                locale: getDateFnsLocale(locale),
                               })
                             : "—"}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setLoanToRestore(loan)}
                           >
-                            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                            Restore
+                            <RotateCcw className="me-1.5 h-3.5 w-3.5" />
+                            {tc("restore")}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -270,18 +274,18 @@ export function DeletedLoans() {
             <AlertDialogMedia className="bg-primary/10 text-primary">
               <RotateCcw />
             </AlertDialogMedia>
-            <AlertDialogTitle>Restore loan?</AlertDialogTitle>
+            <AlertDialogTitle>{t("restoreTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {loanToRestore
-                ? `This will restore the loan for ${loanToRestore.clientName} and return it to your active loan list with all payment history.`
-                : "This will restore the loan and return it to your active loan list."}
+                ? t("restoreDescriptionNamed", { clientName: loanToRestore.clientName })
+                : t("restoreDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={restoring}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={restoring}>{tc("cancel")}</AlertDialogCancel>
             <Button disabled={restoring || !loanToRestore} onClick={handleConfirmRestore}>
-              {restoring ? "Restoring..." : "Restore"}
+              {restoring ? tc("restoring") : tc("restore")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

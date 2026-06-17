@@ -16,7 +16,7 @@ export function withUser<P = Record<string, never>>(
     try {
       return await handler(req, await requireUserId(), ctx);
     } catch (error) {
-      return toErrorResponse(error);
+      return await toErrorResponse(error);
     }
   };
 }
@@ -28,7 +28,7 @@ export function withManager<P = Record<string, never>>(
     try {
       return await handler(req, await requireManagerUserId(), ctx);
     } catch (error) {
-      return toErrorResponse(error);
+      return await toErrorResponse(error);
     }
   };
 }
@@ -40,7 +40,7 @@ export function withAdmin<P = Record<string, never>>(
     try {
       return await handler(req, await requireAdminUserId(), ctx);
     } catch (error) {
-      return toErrorResponse(error);
+      return await toErrorResponse(error);
     }
   };
 }

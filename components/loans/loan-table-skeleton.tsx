@@ -1,3 +1,7 @@
+"use client";
+
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -12,15 +16,6 @@ import { cn } from "@/lib/utils";
 import type { LoanSortField, LoanSortOrder } from "@/lib/loan-sort-types";
 
 const SKELETON_ROWS = 10;
-
-const SORTABLE_COLUMNS: { field: LoanSortField; label: string; className?: string }[] = [
-  { field: "clientName", label: "Client" },
-  { field: "totalAmount", label: "Total" },
-  { field: "amountPaid", label: "Paid" },
-  { field: "outstanding", label: "Outstanding" },
-  { field: "loanDate", label: "Date" },
-  { field: "clientTrust", label: "Trust" },
-];
 
 function SortableTableHead({
   label,
@@ -95,7 +90,7 @@ export function LoanTableSkeleton({ showRecoveredAt = false }: { showRecoveredAt
               <Skeleton className="h-4 w-40" />
             </TableCell>
           ) : null}
-          <TableCell className="text-right">
+          <TableCell className="text-end">
             <div className="flex justify-end gap-2">
               <Skeleton className="h-8 w-8 rounded-lg" />
               <Skeleton className="h-8 w-8 rounded-lg" />
@@ -120,32 +115,52 @@ export function LoanTableShell({
   onSort: (field: LoanSortField) => void;
   showRecoveredAt?: boolean;
 }) {
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
+
+  const sortableColumns = useMemo(
+    () =>
+      [
+        { field: "clientName" as const, label: t("sortClient") },
+        { field: "totalAmount" as const, label: t("sortTotal") },
+        { field: "amountPaid" as const, label: t("sortPaid") },
+        { field: "outstanding" as const, label: t("sortOutstanding") },
+        { field: "loanDate" as const, label: t("sortDate") },
+        { field: "clientTrust" as const, label: t("sortTrust") },
+      ] satisfies { field: LoanSortField; label: string; className?: string }[],
+    [t]
+  );
+
   return (
     <div className="surface-card overflow-hidden">
       <div className="overflow-x-auto">
-      <Table className="min-w-[720px]">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-10 px-2" aria-label="Expand payment history" />
-            {SORTABLE_COLUMNS.map((column) => (
-              <SortableTableHead
-                key={column.field}
-                label={column.label}
-                field={column.field}
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-                className={column.className}
+        <Table className="min-w-[720px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead
+                className="w-10 px-2"
+                aria-label={t("expandPaymentHistory")}
               />
-            ))}
-            {showRecoveredAt ? (
-              <TableHead className="text-muted-foreground">Retention</TableHead>
-            ) : null}
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>{children}</TableBody>
-      </Table>
+              {sortableColumns.map((column) => (
+                <SortableTableHead
+                  key={column.field}
+                  label={column.label}
+                  field={column.field}
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSort={onSort}
+                />
+              ))}
+              {showRecoveredAt ? (
+                <TableHead className="text-muted-foreground">
+                  {t("columnRetention")}
+                </TableHead>
+              ) : null}
+              <TableHead className="text-end">{tc("actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>{children}</TableBody>
+        </Table>
       </div>
     </div>
   );

@@ -285,6 +285,8 @@ export const schemas: Record<string, OpenAPIV3.SchemaObject> = {
       "status",
       "createdAt",
       "lastLoginAt",
+      "lastSeenAt",
+      "isOnline",
       "loanCount",
     ],
     properties: {
@@ -297,6 +299,8 @@ export const schemas: Record<string, OpenAPIV3.SchemaObject> = {
       status: { type: "string", enum: ["pending", "active", "frozen"] },
       createdAt: { type: "string", format: "date-time" },
       lastLoginAt: { type: "string", format: "date-time", nullable: true },
+      lastSeenAt: { type: "string", format: "date-time", nullable: true },
+      isOnline: { type: "boolean" },
       loanCount: { type: "integer", minimum: 0 },
     },
   },

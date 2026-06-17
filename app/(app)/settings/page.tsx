@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { ActivityFeed } from "@/components/activity/activity-feed";
 import { SettingsForm } from "@/components/forms/settings-form";
 import { DeletedLoans } from "@/components/settings/deleted-loans";
@@ -10,21 +11,21 @@ export default async function SettingsPage() {
     return redirectToLogin();
   }
 
+  const t = await getTranslations("settings");
+
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Settings"
-        description="Manage your account and review recent activity."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
       <SettingsForm
         initialFullName={session.user.name ?? ""}
         email={session.user.email ?? ""}
+        initialLocale={session.user.locale ?? "en"}
       />
       <DeletedLoans />
       <ActivityFeed
         embedded
-        title="Activity"
-        description="Your recent actions, loan updates, and sign-in history."
+        title={t("activityTitle")}
+        description={t("activityDescription")}
       />
     </div>
   );

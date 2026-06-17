@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -14,6 +15,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 import { deleteLoan } from "@/lib/loans-client";
 import { notifyError, notifySuccess } from "@/lib/toast";
 
@@ -22,6 +25,7 @@ type DeleteLoanDialogProps = {
   onOpenChange: (open: boolean) => void;
   loanId: string | null;
   clientName?: string;
+  totalAmount?: number;
   onDeleted?: () => void;
   redirectTo?: string;
 };
@@ -31,11 +35,19 @@ export function DeleteLoanDialog({
   onOpenChange,
   loanId,
   clientName,
+  totalAmount,
   onDeleted,
   redirectTo,
 }: DeleteLoanDialogProps) {
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
   const [deleting, setDeleting] = useState(false);
+
+  const highlight = (chunks: React.ReactNode) => (
+    <span className="font-semibold text-foreground">{chunks}</span>
+  );
 
   async function handleConfirm() {
     if (!loanId) {
@@ -49,7 +61,7 @@ export function DeleteLoanDialog({
       onOpenChange(false);
       onDeleted?.();
       notifySuccess(
-        clientName ? `Deleted loan for ${clientName}` : "Loan deleted"
+        clientName ? t("loanDeletedNamed", { clientName }) : t("loanDeleted")
       );
 
       if (redirectTo) {
@@ -58,11 +70,27 @@ export function DeleteLoanDialog({
 
       router.refresh();
     } catch (deleteError) {
-      notifyError(deleteError, "Failed to delete loan");
+      notifyError(deleteError, t("failedDelete"));
     } finally {
       setDeleting(false);
     }
   }
+
+  const description =
+    clientName && totalAmount != null ? (
+      t.rich("deleteDescriptionNamed", {
+        clientName,
+        amount: formatCurrency(totalAmount, locale),
+        highlight,
+      })
+    ) : clientName ? (
+      t.rich("deleteDescriptionNamedNoAmount", {
+        clientName,
+        highlight,
+      })
+    ) : (
+      t("deleteDescription")
+    );
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -71,22 +99,18 @@ export function DeleteLoanDialog({
           <AlertDialogMedia className="bg-destructive/10 text-destructive">
             <Trash2 />
           </AlertDialogMedia>
-          <AlertDialogTitle>Delete loan record?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {clientName
-              ? `This loan for ${clientName} will be moved to Deleted loans in Settings. Deleted loans are kept for 30 days, then permanently removed. You can restore it during that window.`
-              : "This loan will be moved to Deleted loans in Settings. Deleted loans are kept for 30 days, then permanently removed. You can restore it during that window."}
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={deleting}>{tc("cancel")}</AlertDialogCancel>
           <Button
             variant="destructive"
             disabled={deleting || !loanId}
             onClick={handleConfirm}
           >
-            {deleting ? "Deleting..." : "Delete"}
+            {deleting ? tc("deleting") : tc("delete")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

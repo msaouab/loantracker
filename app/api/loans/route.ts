@@ -11,7 +11,7 @@ import { getLoanStatusWhere, parseLoanStatus } from "@/lib/loan-status";
 import { findSortedLoans } from "@/lib/loan-sort";
 import { parseLoanSort } from "@/lib/loan-sort-types";
 import { parseLoanPageSize } from "@/lib/loan-list";
-import { createLoanSchema } from "@/lib/validations";
+import { getCreateLoanSchema } from "@/lib/validations";
 
 export const GET = withManager(async (req, userId) => {
   const { searchParams } = new URL(req.url);
@@ -60,6 +60,7 @@ export const GET = withManager(async (req, userId) => {
 });
 
 export const POST = withManager(async (req, userId) => {
+  const createLoanSchema = await getCreateLoanSchema();
   const input = parseOrThrow(createLoanSchema, await req.json());
   const loan = await createLoan(userId, input);
 

@@ -12,7 +12,7 @@ import {
   softDeleteLoan,
   updateLoan,
 } from "@/lib/loans-service";
-import { updateLoanSchema } from "@/lib/validations";
+import { getUpdateLoanSchema } from "@/lib/validations";
 
 export const GET = withManager<{ id: string }>(async (_req, userId, { params }) => {
   const { id } = await params;
@@ -30,6 +30,7 @@ export const GET = withManager<{ id: string }>(async (_req, userId, { params }) 
 
 export const PUT = withManager<{ id: string }>(async (req, userId, { params }) => {
   const { id } = await params;
+  const updateLoanSchema = await getUpdateLoanSchema();
   const input = parseOrThrow(updateLoanSchema, await req.json());
   const loan = await updateLoan(userId, id, input);
 

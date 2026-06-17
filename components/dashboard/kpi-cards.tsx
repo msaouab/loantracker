@@ -1,11 +1,15 @@
+"use client";
+
 import {
   CircleDollarSign,
   Target,
   TrendingUp,
   Users,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/loans";
+import { useLocale, useTranslations } from "next-intl";
 import type { DashboardStats } from "@/lib/dashboard";
+import { formatCurrency } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 type KpiStats = Pick<
@@ -43,32 +47,40 @@ const cardStyles = [
 ];
 
 export function KpiCards({ stats }: { stats: KpiStats }) {
+  const t = useTranslations("dashboard");
+  const locale = useLocale() as AppLocale;
+
   const activeLoansLabel = stats.isAdminView
-    ? `${stats.activeCount} active loans org-wide`
-    : `${stats.activeCount} active loans`;
+    ? t("activeLoansOrgWide", { count: stats.activeCount })
+    : t("activeLoans", { count: stats.activeCount });
 
   const cards = [
     {
-      title: "Clients",
+      title: t("clients"),
       value: stats.totalClients.toString(),
       description: stats.isAdminView
-        ? "Borrowers recorded across all managers"
-        : "Borrowers recorded in the app",
+        ? t("clientsDescriptionAdmin")
+        : t("clientsDescription"),
     },
     {
-      title: "To Collect",
-      value: formatCurrency(stats.outstanding),
-      description: `Still owed by clients · ${activeLoansLabel}`,
+      title: t("toCollect"),
+      value: formatCurrency(stats.outstanding, locale),
+      description: t("toCollectDescription", { activeLoans: activeLoansLabel }),
     },
     {
-      title: "Collected",
-      value: formatCurrency(stats.amountRecovered),
-      description: `Payments received · ${stats.recoveryRate.toFixed(1)}% of full budget`,
+      title: t("collected"),
+      value: formatCurrency(stats.amountRecovered, locale),
+      description: t("collectedDescription", {
+        rate: stats.recoveryRate.toFixed(1),
+      }),
     },
     {
-      title: "Full Budget",
-      value: formatCurrency(stats.totalLoanAmount),
-      description: `${formatCurrency(stats.amountRecovered)} collected + ${formatCurrency(stats.outstanding)} to collect`,
+      title: t("fullBudget"),
+      value: formatCurrency(stats.totalLoanAmount, locale),
+      description: t("fullBudgetDescription", {
+        collected: formatCurrency(stats.amountRecovered, locale),
+        outstanding: formatCurrency(stats.outstanding, locale),
+      }),
     },
   ];
 

@@ -2,25 +2,39 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { format } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoanPaymentHistory } from "@/components/loans/loan-payment-history";
 import { TrustBadge } from "@/components/loans/trust-badge";
+import { formatDate } from "@/lib/format";
 import { formatCurrency, formatRecoveredRetention } from "@/lib/loans";
+import type { AppLocale } from "@/lib/locale";
 import type { Loan } from "@/lib/loans-client";
 import type { LoanSortField, LoanSortOrder } from "@/lib/loan-sort-types";
 import { LOAN_SORT_FIELDS } from "@/lib/loan-sort-types";
 
-const SORT_LABELS: Record<LoanSortField, string> = {
-  clientName: "Client",
-  totalAmount: "Total",
-  amountPaid: "Paid",
-  outstanding: "Outstanding",
-  loanDate: "Date",
-  clientTrust: "Trust",
+const SORT_KEYS: Record<LoanSortField, "sortClient" | "sortTotal" | "sortPaid" | "sortOutstanding" | "sortDate" | "sortTrust"> = {
+  clientName: "sortClient",
+  totalAmount: "sortTotal",
+  amountPaid: "sortPaid",
+  outstanding: "sortOutstanding",
+  loanDate: "sortDate",
+  clientTrust: "sortTrust",
 };
+
+function useRetentionLabels() {
+  const t = useTranslations("loans");
+  return {
+    today: t("retentionToday"),
+    oneDayAgo: t("retentionOneDayAgo"),
+    daysAgo: (count: number) => t("retentionDaysAgo", { count }),
+    deletesToday: t("retentionDeletesToday"),
+    oneDayLeft: t("retentionOneDayLeft"),
+    daysLeft: (count: number) => t("retentionDaysLeft", { count }),
+  };
+}
 
 export function LoanMobileSort({
   sortBy,
@@ -33,10 +47,12 @@ export function LoanMobileSort({
   onSort: (field: LoanSortField) => void;
   onToggleOrder: () => void;
 }) {
+  const t = useTranslations("loans");
+
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2">
       <label htmlFor="loan-mobile-sort" className="shrink-0 text-sm text-muted-foreground">
-        Sort
+        {t("sortLabel")}
       </label>
       <select
         id="loan-mobile-sort"
@@ -46,7 +62,7 @@ export function LoanMobileSort({
       >
         {LOAN_SORT_FIELDS.map((field) => (
           <option key={field} value={field}>
-            {SORT_LABELS[field]}
+            {t(SORT_KEYS[field])}
           </option>
         ))}
       </select>
@@ -55,7 +71,9 @@ export function LoanMobileSort({
         variant="outline"
         size="icon-sm"
         onClick={onToggleOrder}
-        aria-label={`Sort ${sortOrder === "asc" ? "descending" : "ascending"}`}
+        aria-label={
+          sortOrder === "asc" ? t("sortDescending") : t("sortAscending")
+        }
       >
         {sortOrder === "asc" ? (
           <ArrowUp className="h-4 w-4" />
@@ -78,6 +96,10 @@ export function LoanMobileCard({
   onPaymentsChanged?: () => void;
   showRecoveredAt?: boolean;
 }) {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
+  const retentionLabels = useRetentionLabels();
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -91,7 +113,7 @@ export function LoanMobileCard({
             {loan.clientName}
           </Link>
           <p className="text-sm text-muted-foreground">
-            {format(new Date(loan.loanDate), "MMM d, yyyy")}
+            {formatDate(loan.loanDate, locale)}
           </p>
         </div>
         <TrustBadge trusted={loan.clientTrust} />
@@ -99,32 +121,32 @@ export function LoanMobileCard({
 
       <dl className="grid grid-cols-3 gap-3 text-sm">
         <div>
-          <dt className="text-muted-foreground">Total</dt>
-          <dd className="mt-0.5 font-medium tabular-nums">{formatCurrency(loan.totalAmount)}</dd>
+          <dt className="text-muted-foreground">{t("labelTotal")}</dt>
+          <dd className="mt-0.5 font-medium tabular-nums">{formatCurrency(loan.totalAmount, locale)}</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Paid</dt>
+          <dt className="text-muted-foreground">{t("labelPaid")}</dt>
           <dd className="mt-0.5 font-medium text-success tabular-nums">
-            {formatCurrency(loan.amountPaid)}
+            {formatCurrency(loan.amountPaid, locale)}
             {loan.paymentCount > 0 ? (
-              <span className="ml-1 text-xs text-muted-foreground">
+              <span className="ms-1 text-xs text-muted-foreground">
                 ({loan.paymentCount})
               </span>
             ) : null}
           </dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Due</dt>
+          <dt className="text-muted-foreground">{t("labelDue")}</dt>
           <dd className="mt-0.5 font-medium text-destructive tabular-nums">
-            {formatCurrency(loan.outstanding)}
+            {formatCurrency(loan.outstanding, locale)}
           </dd>
         </div>
       </dl>
 
       {showRecoveredAt ? (
         <p className="text-sm text-muted-foreground">
-          {formatRecoveredRetention(loan.recoveredAt ?? null) ??
-            "Recovery date unavailable"}
+          {formatRecoveredRetention(loan.recoveredAt ?? null, locale, retentionLabels) ??
+            t("recoveryDateUnavailable")}
         </p>
       ) : null}
 
@@ -136,7 +158,7 @@ export function LoanMobileCard({
         onClick={() => setExpanded((current) => !current)}
         aria-expanded={expanded}
       >
-        Payment history
+        {t("paymentHistory")}
         {expanded ? (
           <ChevronDown className="h-4 w-4" />
         ) : (
@@ -155,13 +177,13 @@ export function LoanMobileCard({
       <div className="flex justify-end gap-2 border-t border-border/60 pt-3">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/loans/${loan.id}/edit`}>
-            <Pencil className="mr-1.5 h-3.5 w-3.5" />
-            Edit
+            <Pencil className="me-1.5 h-3.5 w-3.5" />
+            {tc("edit")}
           </Link>
         </Button>
         <Button variant="outline" size="sm" onClick={() => onDelete(loan)}>
-          <Trash2 className="mr-1.5 h-3.5 w-3.5 text-destructive" />
-          Delete
+          <Trash2 className="me-1.5 h-3.5 w-3.5 text-destructive" />
+          {tc("delete")}
         </Button>
       </div>
     </article>

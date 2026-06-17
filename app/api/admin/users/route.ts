@@ -4,7 +4,7 @@ import { parseOrThrow } from "@/lib/errors";
 import { ActivityActions } from "@/lib/activity-log";
 import { logActivityFromRequest } from "@/lib/activity-log-service";
 import { createUser, listUsers, serializeUser } from "@/lib/users-service";
-import { adminCreateUserSchema } from "@/lib/validations";
+import { getAdminCreateUserSchema } from "@/lib/validations";
 
 export const GET = withAdmin(async () => {
   const users = await listUsers();
@@ -15,6 +15,7 @@ export const GET = withAdmin(async () => {
 });
 
 export const POST = withAdmin(async (req, adminUserId) => {
+  const adminCreateUserSchema = await getAdminCreateUserSchema();
   const input = parseOrThrow(adminCreateUserSchema, await req.json());
   const user = await createUser(input);
 

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { format } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,6 +18,8 @@ import {
   isDayBeforeMin,
   parseDateParam,
 } from "@/lib/dates";
+import { getDateFnsLocale } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 type PickerVariant = "default" | "inline";
@@ -52,12 +55,14 @@ function DatePickerCalendar({
   defaultMonth,
   min,
   max,
+  locale,
   onSelect,
 }: {
   selected?: Date;
   defaultMonth?: Date;
   min?: string;
   max?: string;
+  locale: AppLocale;
   onSelect: (date: Date) => void;
 }) {
   return (
@@ -65,6 +70,7 @@ function DatePickerCalendar({
       mode="single"
       selected={selected}
       defaultMonth={defaultMonth ?? selected}
+      locale={getDateFnsLocale(locale)}
       onSelect={(date) => {
         if (date) {
           onSelect(date);
@@ -80,30 +86,35 @@ function PickerLabel({
   selected,
   placeholder,
   formatPattern,
+  locale,
 }: {
   mounted: boolean;
   selected?: Date;
   placeholder: string;
   formatPattern: string;
+  locale: AppLocale;
 }) {
   if (!selected || !mounted) {
     return placeholder;
   }
 
-  return format(selected, formatPattern);
+  return format(selected, formatPattern, { locale: getDateFnsLocale(locale) });
 }
 
 export function DatePicker({
   id,
   value = "",
   onChange,
-  placeholder = "Pick a date",
+  placeholder,
   disabled = false,
   min,
   max,
   className,
   variant = "default",
 }: DatePickerProps) {
+  const t = useTranslations("common");
+  const locale = useLocale() as AppLocale;
+  const resolvedPlaceholder = placeholder ?? t("pickDate");
   const [open, setOpen] = React.useState(false);
   const mounted = useMounted();
   const selected = parseDateParam(value) ?? undefined;
@@ -118,13 +129,14 @@ export function DatePicker({
           disabled={disabled}
           className={getTriggerClassName(variant, Boolean(selected), className)}
         >
-          <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+          <CalendarIcon className="me-2 h-3.5 w-3.5 shrink-0" />
           <span className="truncate" suppressHydrationWarning>
             <PickerLabel
               mounted={mounted}
               selected={selected}
-              placeholder={placeholder}
+              placeholder={resolvedPlaceholder}
               formatPattern="MMM d, yyyy"
+              locale={locale}
             />
           </span>
         </Button>
@@ -134,6 +146,7 @@ export function DatePicker({
           selected={selected}
           min={min}
           max={max}
+          locale={locale}
           onSelect={(date) => {
             onChange(formatDateParam(date));
             setOpen(false);

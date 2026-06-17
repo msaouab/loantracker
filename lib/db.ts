@@ -2,7 +2,13 @@ import { PrismaClient } from "@/app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { getDatabaseUrl } from "@/lib/database-url";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient;
+  prismaSchemaHash?: string;
+};
+
+/** Bust cached client in dev after `prisma generate` adds schema fields. */
+const PRISMA_SCHEMA_HASH = "user-locale-v1";
 
 function createPrismaClient() {
   const adapter = new PrismaPg({
@@ -11,8 +17,21 @@ function createPrismaClient() {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function getPrismaClient() {
+  if (process.env.NODE_ENV === "production") {
+    globalForPrisma.prisma ??= createPrismaClient();
+    return globalForPrisma.prisma;
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  if (
+    !globalForPrisma.prisma ||
+    globalForPrisma.prismaSchemaHash !== PRISMA_SCHEMA_HASH
+  ) {
+    globalForPrisma.prisma = createPrismaClient();
+    globalForPrisma.prismaSchemaHash = PRISMA_SCHEMA_HASH;
+  }
+
+  return globalForPrisma.prisma;
 }
+
+export const prisma = getPrismaClient();

@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { AppError, ConflictError, ValidationError } from "@/lib/errors";
 import type { ApiErrorBody } from "@/lib/api-response";
+import en from "@/messages/en.json";
+
+async function errorT(key: keyof (typeof en)["errors"]) {
+  try {
+    const t = await getTranslations("errors");
+    return t(key);
+  } catch {
+    return en.errors[key];
+  }
+}
 
 function codeForStatus(status: number): string {
   switch (status) {
@@ -37,9 +48,9 @@ export function apiError(
   return NextResponse.json<ApiErrorBody>(body, { status });
 }
 
-export function toErrorResponse(error: unknown): Response {
+export async function toErrorResponse(error: unknown): Promise<Response> {
   if (error instanceof ValidationError) {
-    return apiError("Validation failed", 400, {
+    return apiError(await errorT("validationFailed"), 400, {
       code: "validation_error",
       fields: error.fieldErrors,
     });
@@ -53,10 +64,9 @@ export function toErrorResponse(error: unknown): Response {
   if (error instanceof AppError) {
     return apiError(error.message, error.status);
   }
-  // `req.json()` throws SyntaxError on a malformed body — a client error, not a 500.
   if (error instanceof SyntaxError) {
-    return apiError("Malformed request body", 400, { code: "bad_request" });
+    return apiError(await errorT("malformedBody"), 400, { code: "bad_request" });
   }
   console.error("Unhandled API error:", error);
-  return apiError("Internal server error", 500);
+  return apiError(await errorT("internalError"), 500);
 }

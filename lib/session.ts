@@ -1,11 +1,13 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
+import { Prisma } from "@/app/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
+import { isValidLocale, type AppLocale } from "@/lib/locale";
 
-const sessionUserSelect = {
+const sessionUserSelectBase = {
   id: true,
   email: true,
   fullName: true,
@@ -14,6 +16,31 @@ const sessionUserSelect = {
   isFrozen: true,
   sessionVersion: true,
 } as const;
+
+const sessionUserSelect = {
+  ...sessionUserSelectBase,
+  locale: true,
+} as const;
+
+async function findSessionUser(userId: string) {
+  try {
+    return await prisma.user.findUnique({
+      where: { id: userId },
+      select: sessionUserSelect,
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientValidationError &&
+      error.message.includes("locale")
+    ) {
+      return prisma.user.findUnique({
+        where: { id: userId },
+        select: sessionUserSelectBase,
+      });
+    }
+    throw error;
+  }
+}
 
 /**
  * Authoritative session reader for RSC and API routes.
@@ -31,10 +58,7 @@ export const getSession = cache(async (): Promise<Session | null> => {
   }
   const tokenUser = decoded.user;
 
-  const user = await prisma.user.findUnique({
-    where: { id: tokenUser.id },
-    select: sessionUserSelect,
-  });
+  const user = await findSessionUser(tokenUser.id);
 
   if (!user || !user.isActivated || user.isFrozen) {
     return null;
@@ -46,12 +70,18 @@ export const getSession = cache(async (): Promise<Session | null> => {
     return null;
   }
 
+  const userLocale: AppLocale =
+    "locale" in user && typeof user.locale === "string" && isValidLocale(user.locale)
+      ? user.locale
+      : "en";
+
   return {
     user: {
       id: user.id,
       email: user.email,
       name: user.fullName,
       isAdmin: user.isAdmin,
+      locale: userLocale,
     },
     expires: decoded.expires,
   };

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,18 +20,18 @@ export function LoginForm({
   passwordChanged?: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
     if (registered) {
-      notifyInfo(
-        "Account created. Please wait for an admin to approve your account before signing in."
-      );
+      notifyInfo(t("accountCreatedWait"));
     } else if (passwordChanged) {
-      notifyInfo("Your password was updated. Sign in with your new password.");
+      notifyInfo(t("passwordUpdatedSignIn"));
     }
-  }, [registered, passwordChanged]);
+  }, [registered, passwordChanged, t]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,14 +52,11 @@ export function LoginForm({
 
     if (result?.error) {
       if (result.code === "account_not_activated") {
-        notifyError(
-          null,
-          "Your account is pending approval. Please wait for an admin to activate it."
-        );
+        notifyError(null, t("accountPending"));
       } else if (result.code === "account_frozen") {
-        notifyError(null, "Your account has been frozen. Contact an administrator.");
+        notifyError(null, t("accountFrozen"));
       } else {
-        notifyError(null, "Invalid email or password.");
+        notifyError(null, t("invalidCredentials"));
       }
       return;
     }
@@ -70,12 +68,12 @@ export function LoginForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{tCommon("email")}</Label>
         <Input id="email" name="email" type="email" required />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{tCommon("password")}</Label>
         <PasswordInput id="password" name="password" required />
       </div>
 
@@ -86,18 +84,18 @@ export function LoginForm({
           onCheckedChange={(checked) => setRememberMe(checked === true)}
         />
         <Label htmlFor="rememberMe" className="font-normal">
-          Remember me for 30 days
+          {t("rememberMe")}
         </Label>
       </div>
 
       <Button type="submit" className="h-10 w-full" size="lg" disabled={loading}>
-        {loading ? "Signing in..." : "Sign in"}
+        {loading ? t("signingIn") : t("signIn")}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
+        {t("noAccount")}{" "}
         <Link href="/auth/register" className="font-medium text-primary hover:underline">
-          Create account
+          {t("createAccount")}
         </Link>
       </p>
     </form>

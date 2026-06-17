@@ -1,12 +1,15 @@
+import { getTranslations } from "next-intl/server";
 import { ActivityFeed } from "@/components/activity/activity-feed";
 
-export default function AdminActivityPage() {
+export default async function AdminActivityPage() {
+  const t = await getTranslations("admin");
+
   return (
     <ActivityFeed
       admin
       orgWide
-      title="Admin Activity"
-      description="Audit trail of actions performed across all user accounts."
+      title={t("activityTitle")}
+      description={t("activityDescription")}
     />
   );
 }

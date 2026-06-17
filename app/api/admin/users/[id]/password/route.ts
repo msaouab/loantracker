@@ -8,10 +8,11 @@ import {
   resetManagerPasswordByAdmin,
   serializeUser,
 } from "@/lib/users-service";
-import { adminResetPasswordSchema } from "@/lib/validations";
+import { getAdminResetPasswordSchema } from "@/lib/validations";
 
 export const PATCH = withAdmin<{ id: string }>(async (req, adminUserId, { params }) => {
   const { id } = await params;
+  const adminResetPasswordSchema = await getAdminResetPasswordSchema();
   const input = parseOrThrow(adminResetPasswordSchema, await req.json());
   const target = await prisma.user.findUnique({
     where: { id },
@@ -41,6 +42,7 @@ export const PATCH = withAdmin<{ id: string }>(async (req, adminUserId, { params
       isFrozen: true,
       createdAt: true,
       lastLoginAt: true,
+      lastSeenAt: true,
       _count: { select: { loans: true } },
     },
   });

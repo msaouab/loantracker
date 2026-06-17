@@ -3,10 +3,12 @@ import bcrypt from "bcryptjs";
 import { toErrorResponse } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
 import { ConflictError, parseOrThrow } from "@/lib/errors";
-import { registerSchema } from "@/lib/validations";
+import { getErrorMessage } from "@/lib/server-errors";
+import { getRegisterSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
   try {
+    const registerSchema = await getRegisterSchema();
     const { fullName, email, password } = parseOrThrow(
       registerSchema,
       await request.json()
@@ -14,8 +16,9 @@ export async function POST(request: Request) {
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictError("Email already registered", {
-        email: ["Email already registered"],
+      const message = await getErrorMessage("emailRegistered");
+      throw new ConflictError(message, {
+        email: [message],
       });
     }
 
@@ -32,6 +35,6 @@ export async function POST(request: Request) {
 
     return apiOk({ success: true }, { status: 201 });
   } catch (error) {
-    return toErrorResponse(error);
+    return await toErrorResponse(error);
   }
 }

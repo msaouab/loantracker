@@ -11,7 +11,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatCurrency } from "@/lib/loans";
+import { useLocale, useTranslations } from "next-intl";
+import { formatCurrency } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 
 type DashboardChartsProps = {
   trustDistribution: { trusted: number; notTrusted: number };
@@ -26,27 +28,41 @@ export function DashboardCharts({
   recoveryProgress,
   topClients,
 }: DashboardChartsProps) {
+  const t = useTranslations("dashboard");
+  const locale = useLocale() as AppLocale;
+
   const recoveryData = [
-    { name: "Recovered", value: recoveryProgress.recovered },
-    { name: "Outstanding", value: recoveryProgress.outstanding },
+    { name: t("recovered"), value: recoveryProgress.recovered },
+    { name: t("outstanding"), value: recoveryProgress.outstanding },
   ];
 
   const trustData = [
-    { name: "Trusted", value: trustDistribution.trusted },
-    { name: "Not trusted", value: trustDistribution.notTrusted },
+    { name: t("trusted"), value: trustDistribution.trusted },
+    { name: t("notTrusted"), value: trustDistribution.notTrusted },
   ];
+
+  const formatAmount = (value: number) => formatCurrency(value, locale);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ChartCard title="Recovery Progress">
-        <PieChartSection data={recoveryData} formatter={formatCurrency} />
+      <ChartCard title={t("recoveryProgress")}>
+        <PieChartSection
+          data={recoveryData}
+          formatter={formatAmount}
+          noDataLabel={t("noData")}
+          pieLabel={t}
+        />
       </ChartCard>
 
-      <ChartCard title="Trust Distribution">
-        <PieChartSection data={trustData} />
+      <ChartCard title={t("trustDistribution")}>
+        <PieChartSection
+          data={trustData}
+          noDataLabel={t("noData")}
+          pieLabel={t}
+        />
       </ChartCard>
 
-      <ChartCard title="Top Clients by Loan Amount">
+      <ChartCard title={t("topClients")}>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={topClients} margin={{ bottom: 8, left: 0, right: 8 }}>
             <XAxis
@@ -66,7 +82,7 @@ export function DashboardCharts({
             />
             <Tooltip
               formatter={(value) =>
-                formatCurrency(typeof value === "number" ? value : Number(value))
+                formatAmount(typeof value === "number" ? value : Number(value))
               }
             />
             <Bar dataKey="amount" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
@@ -97,15 +113,19 @@ function ChartCard({
 function PieChartSection({
   data,
   formatter,
+  noDataLabel,
+  pieLabel,
 }: {
   data: { name: string; value: number }[];
   formatter?: (value: number) => string;
+  noDataLabel: string;
+  pieLabel: (key: "pieLabel", values: { name: string; percent: string }) => string;
 }) {
   const filtered = data.filter((item) => item.value > 0);
 
   if (filtered.length === 0) {
     return (
-      <p className="py-16 text-center text-sm text-muted-foreground">No data yet</p>
+      <p className="py-16 text-center text-sm text-muted-foreground">{noDataLabel}</p>
     );
   }
 
@@ -120,7 +140,10 @@ function PieChartSection({
           cy="50%"
           outerRadius={72}
           label={({ name, percent }) =>
-            `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+            pieLabel("pieLabel", {
+              name: name ?? "",
+              percent: ((percent ?? 0) * 100).toFixed(0),
+            })
           }
         >
           {filtered.map((_, index) => (

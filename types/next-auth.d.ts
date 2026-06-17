@@ -15,6 +15,7 @@ declare module "next-auth" {
       name?: string | null;
       isAdmin?: boolean;
       sessionVersion?: number;
+      locale?: "en" | "fr" | "ar";
     };
   }
 }

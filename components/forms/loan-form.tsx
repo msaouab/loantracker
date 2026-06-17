@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { todayDateParam } from "@/lib/dates";
-import { formatCurrency, getOutstanding } from "@/lib/loans";
+import { formatCurrency } from "@/lib/format";
+import { getOutstanding } from "@/lib/loans";
+import type { AppLocale } from "@/lib/locale";
 import { notifyError } from "@/lib/toast";
 
 export type LoanFormValues = {
@@ -54,6 +57,9 @@ export function LoanForm({
   cancelHref,
   amountPaidReadOnly = false,
 }: LoanFormProps) {
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
+  const locale = useLocale() as AppLocale;
   const [values, setValues] = useState(() => createInitialValues(initialValues));
   const [loading, setLoading] = useState(false);
 
@@ -66,7 +72,7 @@ export function LoanForm({
     try {
       await onSubmit(values);
     } catch (submitError) {
-      notifyError(submitError, "Failed to save loan");
+      notifyError(submitError, t("failedSave"));
       setLoading(false);
     }
   }
@@ -75,7 +81,7 @@ export function LoanForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="clientName">Client Name</Label>
+          <Label htmlFor="clientName">{t("clientName")}</Label>
           <Input
             id="clientName"
             value={values.clientName}
@@ -87,7 +93,7 @@ export function LoanForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="totalAmount">Total Amount</Label>
+          <Label htmlFor="totalAmount">{t("totalAmount")}</Label>
           <Input
             id="totalAmount"
             type="number"
@@ -105,17 +111,17 @@ export function LoanForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="amountPaid">Amount Paid</Label>
+          <Label htmlFor="amountPaid">{t("amountPaid")}</Label>
           {amountPaidReadOnly ? (
             <>
               <Input
                 id="amountPaid"
-                value={formatCurrency(values.amountPaid)}
+                value={formatCurrency(values.amountPaid, locale)}
                 readOnly
                 className="font-medium text-success"
               />
               <p className="text-xs text-muted-foreground">
-                Record partial payments from the loan list to update this total.
+                {t("amountPaidReadonly")}
               </p>
             </>
           ) : (
@@ -137,7 +143,7 @@ export function LoanForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="loanDate">Loan Date</Label>
+          <Label htmlFor="loanDate">{t("loanDate")}</Label>
           <DatePicker
             id="loanDate"
             value={values.loanDate}
@@ -148,16 +154,16 @@ export function LoanForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Outstanding Amount</Label>
+          <Label>{t("outstandingAmount")}</Label>
           <Input
-            value={formatCurrency(outstanding)}
+            value={formatCurrency(outstanding, locale)}
             readOnly
             className="font-medium text-destructive"
           />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="description">Note / Description</Label>
+          <Label htmlFor="description">{t("noteDescription")}</Label>
           <Textarea
             id="description"
             value={values.description}
@@ -170,9 +176,9 @@ export function LoanForm({
 
         <div className="flex items-center justify-between rounded-lg border p-4 sm:col-span-2">
           <div>
-            <Label htmlFor="clientTrust">Client Trust</Label>
+            <Label htmlFor="clientTrust">{t("clientTrust")}</Label>
             <p className="text-sm text-muted-foreground">
-              Is this client trustworthy?
+              {t("clientTrustQuestion")}
             </p>
           </div>
           <Switch
@@ -187,10 +193,10 @@ export function LoanForm({
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button type="submit" className="w-full shadow-sm shadow-primary/20 sm:w-auto" disabled={loading}>
-          {loading ? "Saving..." : submitLabel}
+          {loading ? tc("saving") : submitLabel}
         </Button>
         <Button variant="outline" className="w-full sm:w-auto" asChild>
-          <Link href={cancelHref}>Cancel</Link>
+          <Link href={cancelHref}>{tc("cancel")}</Link>
         </Button>
       </div>
     </form>

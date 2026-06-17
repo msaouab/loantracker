@@ -1,7 +1,9 @@
 "use client";
 
 import { History } from "lucide-react";
-import { getActivityTabEmptyDescription, type ActivityTab } from "@/lib/activity-log";
+import { useTranslations } from "next-intl";
+import { getActivityEmptyKey } from "@/lib/activity-i18n";
+import type { ActivityTab } from "@/lib/activity-log";
 import { cn } from "@/lib/utils";
 
 export function ActivityEmptyState({
@@ -11,8 +13,9 @@ export function ActivityEmptyState({
   admin?: boolean;
   tab?: ActivityTab;
 }) {
-  const title = tab === "all" ? "No activity yet" : "Nothing here yet";
-  const description = getActivityTabEmptyDescription(tab, admin);
+  const t = useTranslations("activity");
+  const title = tab === "all" ? t("noActivity") : t("nothingHere");
+  const description = t(getActivityEmptyKey(tab, admin));
 
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center sm:py-16">

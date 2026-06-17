@@ -1,4 +1,7 @@
+"use client";
+
 import { Check, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type TrustBadgeProps = {
@@ -12,16 +15,19 @@ export function TrustBadge({
   label = "short",
   className,
 }: TrustBadgeProps) {
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
+
   const text =
     label === "none"
       ? null
       : label === "long"
         ? trusted
-          ? "Trusted"
-          : "Not trusted"
+          ? t("trusted")
+          : t("notTrusted")
         : trusted
-          ? "Yes"
-          : "No";
+          ? tc("yes")
+          : tc("no");
 
   return (
     <span

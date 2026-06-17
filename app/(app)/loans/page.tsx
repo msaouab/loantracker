@@ -1,11 +1,14 @@
+import { getTranslations } from "next-intl/server";
 import { LoanTable } from "@/components/loans/loan-table";
 
-export default function LoansPage() {
+export default async function LoansPage() {
+  const t = await getTranslations("loans");
+
   return (
     <LoanTable
       status="active"
-      title="Active Loans"
-      emptyMessage="No active loans — everything has been recovered."
+      title={t("activeTitle")}
+      emptyMessage={t("activeEmpty")}
     />
   );
 }

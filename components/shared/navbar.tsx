@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import {
   CircleCheck,
   History,
@@ -22,20 +23,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LanguageMenuItems } from "@/components/shared/language-switcher";
 import { ThemeMenuItems } from "@/components/shared/theme-toggle";
-import { APP_NAME } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
 
 const managerNavItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/loans", label: "Loans", icon: Receipt },
-  { href: "/loans/recovered", label: "Recovered", icon: CircleCheck },
+  { href: "/dashboard", labelKey: "dashboard" as const, icon: LayoutDashboard },
+  { href: "/loans", labelKey: "loans" as const, icon: Receipt },
+  { href: "/loans/recovered", labelKey: "recovered" as const, icon: CircleCheck },
 ];
 
 const adminNavItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/users", label: "Users", icon: ShieldCheck },
-  { href: "/admin/activity", label: "Activity", icon: History },
+  { href: "/admin/dashboard", labelKey: "dashboard" as const, icon: LayoutDashboard },
+  { href: "/admin/users", labelKey: "users" as const, icon: ShieldCheck },
+  { href: "/admin/activity", labelKey: "activity" as const, icon: History },
 ];
 
 function isItemActive(pathname: string, href: string) {
@@ -63,7 +64,9 @@ export function Navbar({
   isAdmin?: boolean;
 }) {
   const pathname = usePathname();
-  const displayName = userName?.trim() || "Account";
+  const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
+  const displayName = userName?.trim() || tCommon("account");
   const initials = getInitials(displayName);
   const items = isAdmin ? adminNavItems : managerNavItems;
   const homeHref = isAdmin ? "/admin/dashboard" : "/dashboard";
@@ -80,7 +83,7 @@ export function Navbar({
             <Landmark className="h-4 w-4" />
           </div>
           <span className="hidden text-base font-semibold tracking-tight sm:inline">
-            {APP_NAME}
+            {tCommon("appName")}
           </span>
         </Link>
 
@@ -100,7 +103,7 @@ export function Navbar({
                 )}
               >
                 <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{item.label}</span>
+                <span className="hidden sm:inline">{t(item.labelKey)}</span>
               </Link>
             );
           })}
@@ -112,7 +115,7 @@ export function Navbar({
             <Button
               variant="default"
               className="size-8 rounded-full border-0 text-xs font-semibold tracking-tight shadow-sm shadow-primary/25 sm:size-9 sm:text-sm"
-              aria-label={`${displayName} account menu`}
+              aria-label={t("accountMenu", { name: displayName })}
             >
               <span aria-hidden="true">{initials}</span>
             </Button>
@@ -124,19 +127,20 @@ export function Navbar({
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href={settingsHref}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
+                <Settings className="me-2 h-4 w-4" />
+                {t("settings")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <LanguageMenuItems />
             <ThemeMenuItems />
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
               onClick={() => signOut({ callbackUrl: "/auth/login" })}
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              <LogOut className="me-2 h-4 w-4" />
+              {t("logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { LoanForm, type LoanFormValues } from "@/components/forms/loan-form";
 import { LoanFormSkeleton } from "@/components/loans/loan-skeletons";
 import { PageHeader } from "@/components/shared/page-header";
@@ -20,6 +21,7 @@ export default function EditLoanPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const t = useTranslations("loans");
   const [loanId, setLoanId] = useState<string | null>(null);
   const [loan, setLoan] = useState<LoanDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export default function EditLoanPage({
           outstanding: data.loan.outstanding,
         });
       } catch {
-        notifyError(null, "Failed to load loan");
+        notifyError(null, t("failedLoadLoan"));
         router.push("/loans");
       } finally {
         setLoading(false);
@@ -50,7 +52,7 @@ export default function EditLoanPage({
     }
 
     loadLoan();
-  }, [params, router]);
+  }, [params, router, t]);
 
   if (loading || !loan || !loanId) {
     return <LoanFormSkeleton />;
@@ -59,14 +61,14 @@ export default function EditLoanPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Edit Loan"
-        description={`Update loan details for ${loan.clientName}.`}
+        title={t("editLoan")}
+        description={t("editLoanDescription", { clientName: loan.clientName })}
       />
 
       <div className="surface-card p-4 sm:p-6">
         <LoanForm
           initialValues={loan}
-          submitLabel="Save changes"
+          submitLabel={t("saveChanges")}
           cancelHref={`/loans/${loanId}`}
           amountPaidReadOnly
           onSubmit={async (values) => {
@@ -78,7 +80,7 @@ export default function EditLoanPage({
               clientTrust: values.clientTrust,
             });
 
-            notifySuccess(`Loan updated for ${values.clientName}`);
+            notifySuccess(t("loanUpdated", { clientName: values.clientName }));
             router.push(`/loans/${loanId}`);
             router.refresh();
           }}

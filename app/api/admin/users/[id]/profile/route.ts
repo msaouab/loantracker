@@ -8,10 +8,11 @@ import {
   serializeUser,
   updateManagerProfileByAdmin,
 } from "@/lib/users-service";
-import { adminUpdateUserProfileSchema } from "@/lib/validations";
+import { getAdminUpdateUserProfileSchema } from "@/lib/validations";
 
 export const PATCH = withAdmin<{ id: string }>(async (req, adminUserId, { params }) => {
   const { id } = await params;
+  const adminUpdateUserProfileSchema = await getAdminUpdateUserProfileSchema();
   const input = parseOrThrow(adminUpdateUserProfileSchema, await req.json());
   const existing = await prisma.user.findUnique({
     where: { id },

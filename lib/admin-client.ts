@@ -25,6 +25,8 @@ export type AdminUser = {
   status: AccountStatus;
   createdAt: string;
   lastLoginAt: string | null;
+  lastSeenAt: string | null;
+  isOnline: boolean;
   loanCount: number;
 };
 

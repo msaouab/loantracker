@@ -6,7 +6,7 @@ import { logActivityFromRequest } from "@/lib/activity-log-service";
 import { prisma } from "@/lib/db";
 import { formatCurrency, getOutstanding } from "@/lib/loans";
 import { getOwnedLoanOrThrow, listPayments, recordPayment, serializePayment } from "@/lib/loans-service";
-import { loanPaymentSchema } from "@/lib/validations";
+import { getLoanPaymentSchema } from "@/lib/validations";
 
 export const GET = withManager<{ id: string }>(async (_req, userId, { params }) => {
   const { id } = await params;
@@ -22,6 +22,7 @@ export const GET = withManager<{ id: string }>(async (_req, userId, { params }) 
 
 export const POST = withManager<{ id: string }>(async (req, userId, { params }) => {
   const { id } = await params;
+  const loanPaymentSchema = await getLoanPaymentSchema();
   const input = parseOrThrow(loanPaymentSchema, await req.json());
   const loan = await getOwnedLoanOrThrow(prisma, userId, id);
   const { payment, amountPaid, outstanding } = await recordPayment(userId, id, input);

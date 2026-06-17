@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { UserPlus } from "lucide-react";
 import {
   AlertDialog,
@@ -40,6 +41,9 @@ export function CreateUserDialog({
   onOpenChange,
   onCreated,
 }: CreateUserDialogProps) {
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
+  const tv = useTranslations("validation");
   const [form, setForm] = useState(initialForm);
   const [creating, setCreating] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -66,16 +70,16 @@ export function CreateUserDialog({
     const errors: Record<string, string> = {};
 
     if (form.fullName.trim().length < 2) {
-      errors.fullName = "Full name is required";
+      errors.fullName = tv("fullNameRequired");
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = "Invalid email address";
+      errors.email = tv("invalidEmail");
     }
     if (form.password.length < 8) {
-      errors.password = "Password must be at least 8 characters";
+      errors.password = tv("passwordMin");
     }
     if (form.password !== form.confirmPassword) {
-      errors.confirmPassword = "Passwords do not match";
+      errors.confirmPassword = tv("passwordsMismatch");
     }
 
     setFieldErrors(errors);
@@ -101,7 +105,7 @@ export function CreateUserDialog({
       onOpenChange(false);
       onCreated?.();
     } catch (createError) {
-      notifyError(createError, "Failed to create user");
+      notifyError(createError, t("failedCreateUser"));
     } finally {
       setCreating(false);
     }
@@ -111,20 +115,19 @@ export function CreateUserDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-md sm:max-w-md">
         <form onSubmit={handleSubmit}>
-          <AlertDialogHeader className="text-left">
+          <AlertDialogHeader className="text-start">
             <AlertDialogMedia className="bg-primary/10 text-primary">
               <UserPlus />
             </AlertDialogMedia>
-            <AlertDialogTitle>Create user account</AlertDialogTitle>
+            <AlertDialogTitle>{t("createUserTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Add a new manager or admin. The account is activated immediately and
-              can sign in right away.
+              {t("createUserDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="create-full-name">Full name</Label>
+              <Label htmlFor="create-full-name">{tc("fullName")}</Label>
               <Input
                 id="create-full-name"
                 value={form.fullName}
@@ -139,7 +142,7 @@ export function CreateUserDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-email">Email</Label>
+              <Label htmlFor="create-email">{tc("email")}</Label>
               <Input
                 id="create-email"
                 type="email"
@@ -153,7 +156,7 @@ export function CreateUserDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-password">Password</Label>
+              <Label htmlFor="create-password">{tc("password")}</Label>
               <PasswordInput
                 id="create-password"
                 value={form.password}
@@ -168,7 +171,7 @@ export function CreateUserDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-confirm-password">Confirm password</Label>
+              <Label htmlFor="create-confirm-password">{tc("confirmPassword")}</Label>
               <PasswordInput
                 id="create-confirm-password"
                 value={form.confirmPassword}
@@ -186,9 +189,9 @@ export function CreateUserDialog({
 
             <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/30 px-3 py-3">
               <div className="space-y-0.5">
-                <Label htmlFor="create-is-admin">Administrator</Label>
+                <Label htmlFor="create-is-admin">{t("administrator")}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Can manage users and access admin pages
+                  {t("administratorDescription")}
                 </p>
               </div>
               <Switch
@@ -201,10 +204,10 @@ export function CreateUserDialog({
 
           <AlertDialogFooter>
             <AlertDialogCancel type="button" disabled={creating}>
-              Cancel
+              {tc("cancel")}
             </AlertDialogCancel>
             <Button type="submit" disabled={creating}>
-              {creating ? "Creating..." : "Create user"}
+              {creating ? tc("creating") : t("createUser")}
             </Button>
           </AlertDialogFooter>
         </form>

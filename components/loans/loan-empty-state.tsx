@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CircleCheck, Receipt, SearchX } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { LoanStatus } from "@/lib/loan-status";
 import { cn } from "@/lib/utils";
@@ -37,24 +38,23 @@ function getVariant(status: LoanStatus, hasActiveFilters: boolean) {
   return "active";
 }
 
-function getTitle(status: LoanStatus, hasActiveFilters: boolean) {
-  if (hasActiveFilters) return "No matching loans";
-  if (status === "completed") return "Nothing recovered yet";
-  return "No active loans";
-}
-
 export function LoanEmptyState({
   status,
   message,
   hasActiveFilters,
   onClearFilters,
 }: LoanEmptyStateProps) {
+  const t = useTranslations("loans");
   const variant = getVariant(status, hasActiveFilters);
   const { icon: Icon, wrapper, ring } = iconStyles[variant];
-  const title = getTitle(status, hasActiveFilters);
-  const description = hasActiveFilters
-    ? "Try a different search term or widen the date range."
-    : message;
+
+  const title = hasActiveFilters
+    ? t("noMatching")
+    : status === "completed"
+      ? t("nothingRecovered")
+      : t("noActive");
+
+  const description = hasActiveFilters ? t("filteredDescription") : message;
 
   return (
     <div className="surface-card overflow-hidden">
@@ -75,19 +75,19 @@ export function LoanEmptyState({
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           {hasActiveFilters && onClearFilters ? (
             <Button variant="outline" onClick={onClearFilters}>
-              Clear filters
+              {t("clearFilters")}
             </Button>
           ) : null}
 
           {!hasActiveFilters && status === "active" ? (
             <Button variant="outline" asChild>
-              <Link href="/loans/recovered">View recovered</Link>
+              <Link href="/loans/recovered">{t("viewRecovered")}</Link>
             </Button>
           ) : null}
 
           {!hasActiveFilters && status === "completed" ? (
             <Button variant="outline" asChild>
-              <Link href="/loans">View active loans</Link>
+              <Link href="/loans">{t("viewActiveLoans")}</Link>
             </Button>
           ) : null}
         </div>

@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/shared/navbar";
+import { PresenceHeartbeat } from "@/components/shared/presence-heartbeat";
 import { getSession, redirectToLogin } from "@/lib/session";
 
 export default async function AppLayout({
@@ -13,6 +14,7 @@ export default async function AppLayout({
 
   return (
     <div className="app-shell min-h-screen">
+      <PresenceHeartbeat />
       <Navbar
         userName={session.user.name}
         isAdmin={session.user.isAdmin}

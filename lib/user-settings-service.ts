@@ -1,11 +1,13 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { NotFoundError, ValidationError } from "@/lib/errors";
+import { getErrorMessage } from "@/lib/server-errors";
+import { getValidationMessages } from "@/lib/validation-messages";
 import { bumpSessionVersion } from "@/lib/session-revocation";
 
 export async function updateUserProfile(userId: string, fullName: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new NotFoundError("User not found");
+  if (!user) throw new NotFoundError(await getErrorMessage("userNotFound"));
 
   return prisma.user.update({
     where: { id: userId },
@@ -20,16 +22,19 @@ export async function changeUserPassword(
   newPassword: string
 ) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new NotFoundError("User not found");
+  if (!user) throw new NotFoundError(await getErrorMessage("userNotFound"));
 
+  const messages = await getValidationMessages();
   const valid = await bcrypt.compare(currentPassword, user.password);
   if (!valid) {
-    throw new ValidationError({ currentPassword: ["Current password is incorrect"] });
+    throw new ValidationError({
+      currentPassword: [messages.currentPasswordIncorrect],
+    });
   }
 
   if (currentPassword === newPassword) {
     throw new ValidationError({
-      newPassword: ["New password must be different from your current password"],
+      newPassword: [messages.newPasswordDifferent],
     });
   }
 

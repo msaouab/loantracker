@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { format } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import {
   CircleUser,
   KeyRound,
@@ -25,21 +25,25 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
-  ACTIVITY_ACTION_LABELS,
+  formatActivityClientInfo,
+  formatActivitySummary,
+} from "@/lib/activity-display";
+import {
+  getActivityActionKey,
+  getActivityTabKey,
+} from "@/lib/activity-i18n";
+import {
   ActivityActions,
   getActivityTabs,
   isSecurityActivity,
-  type ActivityAction,
   type ActivityTab,
 } from "@/lib/activity-log";
 import { fetchActivities, type ActivityItem } from "@/lib/activity-client";
 import { ActivityEmptyState } from "@/components/activity/activity-empty-state";
+import { formatDateTime } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { notifyError } from "@/lib/toast";
-
-function getActionLabel(action: string) {
-  return ACTIVITY_ACTION_LABELS[action as ActivityAction] ?? action;
-}
 
 function ActivityActionIcon({
   action,
@@ -87,8 +91,18 @@ function ActivityRow({
   item: ActivityItem;
   showActor: boolean;
 }) {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("activity");
   const loanHref =
     item.entityType === "loan" && item.entityId ? `/loans/${item.entityId}` : null;
+
+  const deviceLabels = {
+    desktop: t("deviceDesktop"),
+    mobile: t("deviceMobile"),
+    tablet: t("deviceTablet"),
+  };
+  const clientInfo = formatActivityClientInfo(item, locale, deviceLabels);
+  const summary = formatActivitySummary(item, locale, t);
 
   return (
     <div className="flex gap-3 px-4 py-3 sm:px-5">
@@ -98,23 +112,23 @@ function ActivityRow({
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {getActionLabel(item.action)}
+            {t(getActivityActionKey(item.action))}
           </span>
           <span className="text-xs text-muted-foreground">
-            {format(new Date(item.createdAt), "MMM d, yyyy · h:mm a")}
+            {formatDateTime(item.createdAt, locale, "MMM d, yyyy · h:mm a")}
           </span>
         </div>
         <p className="text-sm leading-snug">
-          {isSecurityActivity(item.action) && item.clientInfo
-            ? item.clientInfo
-            : item.summary}
+          {isSecurityActivity(item.action) ? clientInfo : summary}
         </p>
         {showActor && item.actorName ? (
-          <p className="text-xs text-muted-foreground">By {item.actorName}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("byActor", { actorName: item.actorName })}
+          </p>
         ) : null}
         {loanHref ? (
           <Link href={loanHref} className="text-xs font-medium text-primary hover:underline">
-            View loan
+            {t("viewLoan")}
           </Link>
         ) : null}
       </div>
@@ -139,9 +153,11 @@ export function ActivityFeed({
   orgWide = false,
   userId,
   embedded = false,
-  title = "Activity",
-  description = "Your recent actions and sign-in history.",
+  title,
+  description,
 }: ActivityFeedProps) {
+  const t = useTranslations("activity");
+  const tc = useTranslations("common");
   const tabs = getActivityTabs(admin);
   const [activeTab, setActiveTab] = useState<ActivityTab>("all");
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -149,6 +165,9 @@ export function ActivityFeed({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const displayTitle = title ?? t("title");
+  const displayDescription = description ?? t("description");
 
   const categoryFilter = activeTab;
 
@@ -171,11 +190,11 @@ export function ActivityFeed({
       });
       applyActivityData(data);
     } catch (err) {
-      notifyError(err, "Failed to load activity");
+      notifyError(err, t("failedLoad"));
     } finally {
       setLoading(false);
     }
-  }, [orgWide, userId, applyActivityData, categoryFilter, page]);
+  }, [orgWide, userId, applyActivityData, categoryFilter, page, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -193,7 +212,7 @@ export function ActivityFeed({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        notifyError(err, "Failed to load activity");
+        notifyError(err, t("failedLoad"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -202,7 +221,7 @@ export function ActivityFeed({
     return () => {
       cancelled = true;
     };
-  }, [orgWide, userId, applyActivityData, categoryFilter, page]);
+  }, [orgWide, userId, applyActivityData, categoryFilter, page, t]);
 
   function goToPage(nextPage: number) {
     setLoading(true);
@@ -222,7 +241,7 @@ export function ActivityFeed({
     <div className="overflow-x-auto px-4 py-3 sm:px-5">
       <div
         role="tablist"
-        aria-label="Activity types"
+        aria-label={t("tablistAria")}
         className="inline-flex min-w-full gap-0.5 rounded-lg border border-border/70 bg-muted/50 p-0.5 sm:min-w-0"
       >
         {tabs.map((tab) => {
@@ -241,7 +260,7 @@ export function ActivityFeed({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {tab.label}
+              {t(getActivityTabKey(tab.id))}
             </button>
           );
         })}
@@ -278,7 +297,7 @@ export function ActivityFeed({
           <Separator />
           <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
             <p className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
+              {t("pageOf", { page, totalPages })}
             </p>
             <div className="flex gap-2">
               <Button
@@ -287,7 +306,7 @@ export function ActivityFeed({
                 disabled={page <= 1 || loading}
                 onClick={() => goToPage(Math.max(1, page - 1))}
               >
-                Previous
+                {tc("previous")}
               </Button>
               <Button
                 variant="outline"
@@ -295,7 +314,7 @@ export function ActivityFeed({
                 disabled={page >= totalPages || loading}
                 onClick={() => goToPage(page + 1)}
               >
-                Next
+                {tc("next")}
               </Button>
             </div>
           </div>
@@ -312,8 +331,8 @@ export function ActivityFeed({
       >
         <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
           <div className="space-y-1">
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle>{displayTitle}</CardTitle>
+            <CardDescription>{displayDescription}</CardDescription>
           </div>
           <Button
             variant="outline"
@@ -321,10 +340,10 @@ export function ActivityFeed({
             className="shrink-0"
             onClick={() => refreshActivities()}
             disabled={loading}
-            aria-label="Refresh activity"
+            aria-label={t("refreshAria")}
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{tc("refresh")}</span>
           </Button>
         </CardHeader>
         <CardContent className="p-0">
@@ -333,7 +352,7 @@ export function ActivityFeed({
           <Separator />
           <div className="flex items-center justify-between px-4 py-3 sm:px-5">
             <p className="text-sm text-muted-foreground">
-              {total} {total === 1 ? "event" : "events"}
+              {t("eventsCount", { count: total })}
             </p>
           </div>
           <Separator />
@@ -348,8 +367,8 @@ export function ActivityFeed({
       <div className="surface-card overflow-hidden">
         <div className="flex items-start justify-between gap-3 p-4 sm:items-center sm:px-5 sm:py-2.5">
           <div className="min-w-0 space-y-0.5">
-            <h1 className="text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <h1 className="text-lg font-semibold tracking-tight sm:text-xl">{displayTitle}</h1>
+            <p className="text-sm text-muted-foreground">{displayDescription}</p>
           </div>
           <Button
             variant="outline"
@@ -357,10 +376,10 @@ export function ActivityFeed({
             className="size-8 shrink-0 p-0 sm:h-8 sm:w-auto sm:gap-1.5 sm:px-3"
             onClick={() => refreshActivities()}
             disabled={loading}
-            aria-label="Refresh activity"
+            aria-label={t("refreshAria")}
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{tc("refresh")}</span>
           </Button>
         </div>
         <Separator />
@@ -368,7 +387,7 @@ export function ActivityFeed({
         <Separator />
         <div className="flex items-center justify-between px-4 py-3 sm:px-5">
           <p className="text-sm text-muted-foreground">
-            {total} {total === 1 ? "event" : "events"}
+            {t("eventsCount", { count: total })}
           </p>
         </div>
         <Separator />

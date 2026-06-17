@@ -1,6 +1,9 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { NotFoundError, ValidationError } from "@/lib/errors";
+import { getErrorMessage } from "@/lib/server-errors";
+import type { AppLocale } from "@/lib/locale";
 import {
   formatCurrency,
   getOutstanding,
@@ -10,6 +13,19 @@ import { recordPurgedRecoveredLoans } from "@/lib/user-stats-service";
 import type { CreateLoanInput, LoanPaymentInput, UpdateLoanInput } from "@/lib/validations";
 
 type Db = Prisma.TransactionClient;
+
+/**
+ * Resolves the request-locale translator + locale for business-rule validation
+ * errors thrown below zod (cross-field checks). Called only on the failure path,
+ * so the happy path pays no i18n cost.
+ */
+async function getBusinessRuleValidator() {
+  const [t, locale] = await Promise.all([
+    getTranslations("validation"),
+    getLocale(),
+  ]);
+  return { t, locale: locale as AppLocale };
+}
 
 export const DELETED_LOAN_RETENTION_DAYS = 30;
 export { RECOVERED_LOAN_RETENTION_DAYS };
@@ -54,7 +70,7 @@ export function serializePayment(payment: LoanPaymentRecord) {
 
 export async function getOwnedLoanOrThrow(db: Db, userId: string, loanId: string) {
   const loan = await db.loan.findFirst({ where: { id: loanId, userId, deletedAt: null } });
-  if (!loan) throw new NotFoundError("Loan not found");
+  if (!loan) throw new NotFoundError(await getErrorMessage("loanNotFound"));
   return loan;
 }
 
@@ -81,7 +97,8 @@ async function syncAmountPaid(db: Db, loanId: string): Promise<number> {
 
 export async function createLoan(userId: string, input: CreateLoanInput) {
   if (input.amountPaid > input.totalAmount) {
-    throw new ValidationError({ amountPaid: ["Amount paid cannot exceed total amount"] });
+    const { t } = await getBusinessRuleValidator();
+    throw new ValidationError({ amountPaid: [t("amountPaidExceedsTotal")] });
   }
   return prisma.$transaction(async (tx) => {
     const loan = await tx.loan.create({
@@ -119,8 +136,11 @@ export async function updateLoan(userId: string, loanId: string, input: UpdateLo
   return prisma.$transaction(async (tx) => {
     const existing = await getOwnedLoanOrThrow(tx, userId, loanId);
     if (input.totalAmount < existing.amountPaid) {
+      const { t, locale } = await getBusinessRuleValidator();
       throw new ValidationError({
-        totalAmount: [`Total cannot be below amount already paid (${formatCurrency(existing.amountPaid)})`],
+        totalAmount: [
+          t("totalBelowPaid", { amount: formatCurrency(existing.amountPaid, locale) }),
+        ],
       });
     }
     const recoveredAt = computeRecoveredAt(
@@ -160,7 +180,7 @@ export async function restoreLoan(userId: string, loanId: string) {
   const loan = await prisma.loan.findFirst({
     where: { id: loanId, userId, deletedAt: { gte: deletedRetentionCutoff() } },
   });
-  if (!loan) throw new NotFoundError("Deleted loan not found");
+  if (!loan) throw new NotFoundError(await getErrorMessage("deletedLoanNotFound"));
   return prisma.loan.update({ where: { id: loanId }, data: { deletedAt: null } });
 }
 
@@ -207,8 +227,11 @@ export async function recordPayment(userId: string, loanId: string, input: LoanP
       (await tx.loanPayment.aggregate({ where: { loanId }, _sum: { amount: true } }))._sum.amount ?? 0;
     const outstanding = getOutstanding(loan.totalAmount, currentPaid);
     if (input.amount > outstanding) {
+      const { t, locale } = await getBusinessRuleValidator();
       throw new ValidationError({
-        amount: [`Payment cannot exceed outstanding balance of ${formatCurrency(outstanding)}`],
+        amount: [
+          t("paymentExceedsOutstanding", { amount: formatCurrency(outstanding, locale) }),
+        ],
       });
     }
     const payment = await tx.loanPayment.create({
@@ -233,7 +256,7 @@ export async function updatePayment(
   return prisma.$transaction(async (tx) => {
     const loan = await getOwnedLoanOrThrow(tx, userId, loanId);
     const existing = await tx.loanPayment.findFirst({ where: { id: paymentId, loanId } });
-    if (!existing) throw new NotFoundError("Payment not found");
+    if (!existing) throw new NotFoundError(await getErrorMessage("paymentNotFound"));
 
     const totalPaid =
       (await tx.loanPayment.aggregate({ where: { loanId }, _sum: { amount: true } }))._sum.amount ?? 0;
@@ -241,8 +264,11 @@ export async function updatePayment(
     const maxAllowed = loan.totalAmount - currentPaidExcluding;
 
     if (input.amount > maxAllowed) {
+      const { t, locale } = await getBusinessRuleValidator();
       throw new ValidationError({
-        amount: [`Payment cannot exceed ${formatCurrency(maxAllowed)} for this loan`],
+        amount: [
+          t("paymentExceedsMax", { amount: formatCurrency(maxAllowed, locale) }),
+        ],
       });
     }
 
@@ -263,7 +289,7 @@ export async function deletePayment(userId: string, loanId: string, paymentId: s
   return prisma.$transaction(async (tx) => {
     const loan = await getOwnedLoanOrThrow(tx, userId, loanId);
     const existing = await tx.loanPayment.findFirst({ where: { id: paymentId, loanId } });
-    if (!existing) throw new NotFoundError("Payment not found");
+    if (!existing) throw new NotFoundError(await getErrorMessage("paymentNotFound"));
 
     await tx.loanPayment.delete({ where: { id: paymentId } });
     const amountPaid = await syncAmountPaid(tx, loanId);

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { ActivityFeed } from "@/components/activity/activity-feed";
 import { SettingsForm } from "@/components/forms/settings-form";
 import { PageHeader } from "@/components/shared/page-header";
@@ -5,23 +6,28 @@ import { getSession, requireAdminOrRedirect } from "@/lib/session";
 
 export default async function AdminSettingsPage() {
   await requireAdminOrRedirect();
-  const session = await getSession();
+  const [session, tSettings, tAdmin] = await Promise.all([
+    getSession(),
+    getTranslations("settings"),
+    getTranslations("admin"),
+  ]);
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Settings"
-        description="Manage your admin account and review your recent activity."
+        title={tSettings("title")}
+        description={tAdmin("settingsDescription")}
       />
       <SettingsForm
         initialFullName={session?.user.name ?? ""}
         email={session?.user.email ?? ""}
+        initialLocale={session?.user.locale ?? "en"}
       />
       <ActivityFeed
         admin
         embedded
-        title="Activity"
-        description="Your sign-ins, account changes, and user-management actions."
+        title={tSettings("activityTitle")}
+        description={tAdmin("activitySettingsDescription")}
       />
     </div>
   );

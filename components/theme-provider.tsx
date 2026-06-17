@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "next-intl";
 import {
   applyTheme,
   readStoredTheme,
@@ -80,11 +81,18 @@ function setThemeState(next: Theme) {
 const ThemeContext = React.createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const locale = useLocale();
   const { theme, resolvedTheme } = React.useSyncExternalStore(
     subscribe,
     getSnapshot,
     getServerSnapshot
   );
+
+  // Locale switches refresh the root layout and can reset <html> classes applied
+  // outside React (light/dark). Re-apply the stored preference after those updates.
+  React.useLayoutEffect(() => {
+    applyTheme(theme);
+  }, [locale, theme]);
 
   const setTheme = React.useCallback((next: Theme) => {
     setThemeState(next);

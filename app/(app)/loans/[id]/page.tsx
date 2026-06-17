@@ -2,15 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
 import { LoanDetailSkeleton } from "@/components/loans/loan-skeletons";
 import { DeleteLoanDialog } from "@/components/loans/delete-loan-dialog";
 import { LoanPaymentHistory } from "@/components/loans/loan-payment-history";
 import { TrustBadge } from "@/components/loans/trust-badge";
 import { fetchLoan, type LoanDetailRecord } from "@/lib/loans-client";
-import { formatCurrency } from "@/lib/loans";
+import { formatCurrency, formatDate } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 
 export default function LoanDetailPage({
   params,
@@ -18,6 +19,9 @@ export default function LoanDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
+  const locale = useLocale() as AppLocale;
   const [loan, setLoan] = useState<LoanDetailRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -48,22 +52,22 @@ export default function LoanDetailPage({
     <div className="space-y-4">
       <PageHeader
         title={loan.clientName}
-        description="Loan details"
+        description={t("loanDetails")}
       >
         <PageHeaderAction
           href="/loans"
-          label="Back to list"
+          label={t("backToList")}
           icon={ArrowLeft}
           variant="outline"
         />
         <PageHeaderAction
           href={`/loans/${loan.id}/edit`}
-          label="Edit"
+          label={tc("edit")}
           icon={Pencil}
           variant="outline"
         />
         <PageHeaderAction
-          label="Delete"
+          label={tc("delete")}
           icon={Trash2}
           variant="destructive"
           onClick={() => setDeleteOpen(true)}
@@ -75,35 +79,36 @@ export default function LoanDetailPage({
         onOpenChange={setDeleteOpen}
         loanId={loan.id}
         clientName={loan.clientName}
+        totalAmount={loan.totalAmount}
         redirectTo="/loans"
       />
 
       <div className="surface-card grid gap-4 p-4 sm:grid-cols-2 sm:gap-6 sm:p-6">
-          <DetailItem label="Total Amount" value={formatCurrency(loan.totalAmount)} />
+          <DetailItem label={t("totalAmount")} value={formatCurrency(loan.totalAmount, locale)} />
           <DetailItem
-            label="Amount Paid"
+            label={t("amountPaid")}
             value={
-              <span className="text-success">{formatCurrency(loan.amountPaid)}</span>
+              <span className="text-success">{formatCurrency(loan.amountPaid, locale)}</span>
             }
           />
           <DetailItem
-            label="Outstanding"
+            label={t("outstanding")}
             value={
-              <span className="text-destructive">{formatCurrency(loan.outstanding)}</span>
+              <span className="text-destructive">{formatCurrency(loan.outstanding, locale)}</span>
             }
           />
           <DetailItem
-            label="Loan Date"
-            value={format(new Date(loan.loanDate), "MMM d, yyyy")}
+            label={t("loanDate")}
+            value={formatDate(loan.loanDate, locale)}
           />
           <DetailItem
-            label="Trust Status"
+            label={t("trustStatus")}
             value={<TrustBadge trusted={loan.clientTrust} label="long" />}
           />
           <div className="sm:col-span-2">
             <DetailItem
-              label="Description"
-              value={loan.description || "No notes provided."}
+              label={tc("description")}
+              value={loan.description || t("noNotes")}
             />
           </div>
       </div>

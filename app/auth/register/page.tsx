@@ -1,11 +1,14 @@
+import { getTranslations } from "next-intl/server";
 import { AuthCard } from "@/components/shared/auth-card";
 import { RegisterForm } from "@/components/forms/register-form";
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const t = await getTranslations("auth");
+
   return (
     <AuthCard
-      title="Create account"
-      description="Register your account. An admin must approve it before you can sign in."
+      title={t("createAccountTitle")}
+      description={t("createAccountDescription")}
     >
       <RegisterForm />
     </AuthCard>

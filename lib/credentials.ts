@@ -49,9 +49,10 @@ export async function authenticateUser(
     throw new AccountFrozenError();
   }
 
+  const now = new Date();
   await prisma.user.update({
     where: { id: user.id },
-    data: { lastLoginAt: new Date() },
+    data: { lastLoginAt: now, lastSeenAt: now },
   });
 
   return {

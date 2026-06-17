@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Separator } from "@/components/ui/separator";
+import { LanguageSelect } from "@/components/shared/language-select";
 import { changePassword, updateProfile } from "@/lib/settings-client";
 import { ApiRequestError } from "@/lib/api-client";
+import type { AppLocale } from "@/lib/locale";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -27,11 +30,15 @@ function FieldError({ message }: { message?: string }) {
 export function SettingsForm({
   initialFullName,
   email,
+  initialLocale,
 }: {
   initialFullName: string;
   email: string;
+  initialLocale: AppLocale;
 }) {
   const router = useRouter();
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [fullName, setFullName] = useState(initialFullName);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileErrors, setProfileErrors] = useState<Record<string, string[]>>({});
@@ -46,13 +53,13 @@ export function SettingsForm({
 
     try {
       await updateProfile(fullName);
-      notifySuccess("Profile updated");
+      notifySuccess(t("profileUpdated"));
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError && error.fieldErrors) {
         setProfileErrors(error.fieldErrors);
       } else {
-        notifyError(error, "Failed to update profile");
+        notifyError(error, t("failedUpdateProfile"));
       }
     } finally {
       setProfileLoading(false);
@@ -73,14 +80,14 @@ export function SettingsForm({
 
     try {
       await changePassword(payload);
-      notifySuccess("Password changed. Please sign in again.");
+      notifySuccess(t("passwordChanged"));
       await signOut({ callbackUrl: "/auth/login?passwordChanged=true" });
     } catch (error) {
       setPasswordLoading(false);
       if (error instanceof ApiRequestError && error.fieldErrors) {
         setPasswordErrors(error.fieldErrors);
       } else {
-        notifyError(error, "Failed to change password");
+        notifyError(error, t("failedChangePassword"));
       }
     }
   }
@@ -91,19 +98,19 @@ export function SettingsForm({
     <div className="space-y-4">
       <Card className="surface-card border-0 ring-1 ring-foreground/10">
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Update your display name.</CardDescription>
+          <CardTitle>{t("profile")}</CardTitle>
+          <CardDescription>{t("profileDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{tc("email")}</Label>
               <Input id="email" value={email} disabled />
-              <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
+              <p className="text-xs text-muted-foreground">{t("emailCannotChange")}</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full name</Label>
+              <Label htmlFor="fullName">{tc("fullName")}</Label>
               <Input
                 id="fullName"
                 name="fullName"
@@ -116,7 +123,7 @@ export function SettingsForm({
             </div>
 
             <Button type="submit" disabled={profileLoading || !profileDirty}>
-              {profileLoading ? "Saving..." : "Save name"}
+              {profileLoading ? tc("saving") : t("saveName")}
             </Button>
           </form>
         </CardContent>
@@ -124,15 +131,13 @@ export function SettingsForm({
 
       <Card className="surface-card border-0 ring-1 ring-foreground/10">
         <CardHeader>
-          <CardTitle>Password</CardTitle>
-          <CardDescription>
-            Change your password. You will be signed out of all devices.
-          </CardDescription>
+          <CardTitle>{t("password")}</CardTitle>
+          <CardDescription>{t("passwordDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current password</Label>
+              <Label htmlFor="currentPassword">{t("currentPassword")}</Label>
               <PasswordInput id="currentPassword" name="currentPassword" required />
               <FieldError message={passwordErrors.currentPassword?.[0]} />
             </div>
@@ -140,13 +145,13 @@ export function SettingsForm({
             <Separator />
 
             <div className="space-y-2">
-              <Label htmlFor="newPassword">New password</Label>
+              <Label htmlFor="newPassword">{t("newPassword")}</Label>
               <PasswordInput id="newPassword" name="newPassword" minLength={8} required />
               <FieldError message={passwordErrors.newPassword?.[0]} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Label htmlFor="confirmPassword">{t("confirmNewPassword")}</Label>
               <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
@@ -157,9 +162,15 @@ export function SettingsForm({
             </div>
 
             <Button type="submit" disabled={passwordLoading}>
-              {passwordLoading ? "Updating..." : "Change password"}
+              {passwordLoading ? tc("updating") : t("changePassword")}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="surface-card border-0 ring-1 ring-foreground/10">
+        <CardContent className="pt-6">
+          <LanguageSelect initialLocale={initialLocale} />
         </CardContent>
       </Card>
     </div>

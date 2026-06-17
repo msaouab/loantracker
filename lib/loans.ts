@@ -1,35 +1,34 @@
-export const RECOVERED_LOAN_RETENTION_DAYS = 30;
+import { getOutstanding } from "@/lib/loans-core";
+import {
+  formatCurrency as formatCurrencyForLocale,
+  formatRecoveredRetention as formatRecoveredRetentionForLocale,
+} from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 
-// Amounts are stored as whole MAD (no fractional cents).
+export { getOutstanding, RECOVERED_LOAN_RETENTION_DAYS } from "@/lib/loans-core";
 
-export function getOutstanding(totalAmount: number, amountPaid: number) {
-  return Math.max(0, totalAmount - amountPaid);
+export function formatCurrency(amount: number, locale: AppLocale = "en") {
+  return formatCurrencyForLocale(amount, locale);
 }
 
-function daysSince(date: Date) {
-  const ms = Date.now() - date.getTime();
-  return Math.floor(ms / (1000 * 60 * 60 * 24));
-}
-
-export function daysUntilRecoveredPurge(recoveredAt: Date | string) {
-  const recovered = typeof recoveredAt === "string" ? new Date(recoveredAt) : recoveredAt;
-  return Math.max(0, RECOVERED_LOAN_RETENTION_DAYS - daysSince(recovered));
-}
-
-export function formatRecoveredRetention(recoveredAt: string | null) {
-  if (!recoveredAt) {
-    return null;
-  }
-
-  const recovered = new Date(recoveredAt);
-  const daysAgo = daysSince(recovered);
-  const daysLeft = daysUntilRecoveredPurge(recovered);
-  const agoLabel =
-    daysAgo === 0 ? "Today" : daysAgo === 1 ? "1d ago" : `${daysAgo}d ago`;
-  const purgeLabel =
-    daysLeft === 0 ? "deletes today" : daysLeft === 1 ? "1d left" : `${daysLeft}d left`;
-
-  return `${agoLabel} · ${purgeLabel}`;
+export function formatRecoveredRetention(
+  recoveredAt: string | null,
+  locale: AppLocale = "en",
+  labels?: Parameters<typeof formatRecoveredRetentionForLocale>[2]
+) {
+  const defaultLabels = {
+    today: "Today",
+    daysAgo: "{count}d ago",
+    oneDayAgo: "1d ago",
+    deletesToday: "deletes today",
+    daysLeft: "{count}d left",
+    oneDayLeft: "1d left",
+  };
+  return formatRecoveredRetentionForLocale(
+    recoveredAt,
+    locale,
+    labels ?? defaultLabels
+  );
 }
 
 type LoanRecord = {
@@ -61,13 +60,4 @@ export function serializeLoan(loan: LoanRecord) {
     deletedAt: loan.deletedAt?.toISOString() ?? null,
     recoveredAt: loan.recoveredAt?.toISOString() ?? null,
   };
-}
-
-export function formatCurrency(amount: number) {
-  const formatted = new Intl.NumberFormat("fr-MA", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-
-  return `${formatted} DH`;
 }

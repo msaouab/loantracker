@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Clock, Snowflake, UserCheck, Users } from "lucide-react";
 import type { AdminDashboardStats } from "@/lib/admin-dashboard";
 import { cn } from "@/lib/utils";
@@ -26,26 +29,28 @@ const cardStyles = [
 ];
 
 export function AdminKpiCards({ stats }: { stats: AdminDashboardStats }) {
+  const t = useTranslations("admin");
+
   const cards = [
     {
-      title: "Managers",
+      title: t("managers"),
       value: stats.totalManagers.toString(),
-      description: "Loan managers registered in the app",
+      description: t("managersDescription"),
     },
     {
-      title: "Pending approval",
+      title: t("pendingApproval"),
       value: stats.pendingCount.toString(),
-      description: "Accounts waiting for admin approval",
+      description: t("pendingDescription"),
     },
     {
-      title: "Active",
+      title: t("active"),
       value: stats.activeCount.toString(),
-      description: "Approved managers who can sign in",
+      description: t("activeDescription"),
     },
     {
-      title: "Frozen",
+      title: t("frozen"),
       value: stats.frozenCount.toString(),
-      description: "Accounts temporarily blocked from access",
+      description: t("frozenDescription"),
     },
   ];
 

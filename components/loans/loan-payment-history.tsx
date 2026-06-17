@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { format } from "date-fns";
-import { Banknote, Pencil, Plus, Trash2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Banknote, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { DeletePaymentDialog } from "@/components/loans/delete-payment-dialog";
 import { EditPaymentDialog } from "@/components/loans/edit-payment-dialog";
 import { dateParamToIso, todayDateParam } from "@/lib/dates";
+import { formatDate } from "@/lib/format";
 import { formatCurrency } from "@/lib/loans";
+import type { AppLocale } from "@/lib/locale";
 import {
   createLoanPayment,
   fetchLoanPayments,
@@ -35,6 +37,9 @@ export function LoanPaymentHistory({
   initialOutstanding,
   onPaymentsChanged,
 }: LoanPaymentHistoryProps) {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
   const hasInitialData = initialPayments !== undefined;
 
   const [payments, setPayments] = useState<LoanPayment[]>(
@@ -60,11 +65,11 @@ export function LoanPaymentHistory({
       setPayments(data.payments);
       setOutstanding(data.outstanding);
     } catch (loadError) {
-      notifyError(loadError, "Failed to load payment history");
+      notifyError(loadError, t("failedLoadPayments"));
     } finally {
       setLoading(false);
     }
-  }, [loanId]);
+  }, [loanId, t]);
 
   useEffect(() => {
     if (hasInitialData) {
@@ -81,7 +86,7 @@ export function LoanPaymentHistory({
       })
       .catch((loadError: unknown) => {
         if (cancelled) return;
-        notifyError(loadError, "Failed to load payment history");
+        notifyError(loadError, t("failedLoadPayments"));
       })
       .finally(() => {
         if (!cancelled) {
@@ -92,14 +97,14 @@ export function LoanPaymentHistory({
     return () => {
       cancelled = true;
     };
-  }, [hasInitialData, loanId]);
+  }, [hasInitialData, loanId, t]);
 
   async function handleAddPayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const amount = Math.round(Number(addAmount));
 
     if (!amount || amount <= 0) {
-      notifyError(null, "Enter a valid payment amount");
+      notifyError(null, t("invalidAmount"));
       return;
     }
 
@@ -117,9 +122,9 @@ export function LoanPaymentHistory({
       setShowAddForm(false);
       await loadPayments();
       onPaymentsChanged?.();
-      notifySuccess("Payment recorded");
+      notifySuccess(t("paymentRecorded"));
     } catch (submitError) {
-      notifyError(submitError, "Failed to record payment");
+      notifyError(submitError, t("failedRecordPayment"));
     } finally {
       setAdding(false);
     }
@@ -144,18 +149,20 @@ export function LoanPaymentHistory({
     <div className="space-y-4 py-1">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium">Payment history</p>
+          <p className="text-sm font-medium">{t("paymentHistory")}</p>
           <p className="text-xs text-muted-foreground">
-            {payments.length} payment{payments.length === 1 ? "" : "s"} recorded
+            {t("paymentsCount", { count: payments.length })}
             {outstanding > 0 ? (
               <>
                 {" · "}
                 <span className="text-destructive">
-                  {formatCurrency(outstanding)} remaining
+                  {t("remaining", {
+                    amount: formatCurrency(outstanding, locale),
+                  })}
                 </span>
               </>
             ) : (
-              " · fully paid"
+              ` · ${t("fullyPaid")}`
             )}
           </p>
         </div>
@@ -166,8 +173,12 @@ export function LoanPaymentHistory({
             size="sm"
             onClick={() => setShowAddForm((current) => !current)}
           >
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            {showAddForm ? "Cancel" : "Record payment"}
+            {showAddForm ? (
+              <Minus className="me-1.5 h-3.5 w-3.5" />
+            ) : (
+              <Plus className="me-1.5 h-3.5 w-3.5" />
+            )}
+            {showAddForm ? tc("cancel") : t("recordPayment")}
           </Button>
         ) : null}
       </div>
@@ -178,7 +189,7 @@ export function LoanPaymentHistory({
           className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-4 sm:grid-cols-2"
         >
           <div className="space-y-2">
-            <Label htmlFor={`payment-amount-${loanId}`}>Amount</Label>
+            <Label htmlFor={`payment-amount-${loanId}`}>{tc("amount")}</Label>
             <Input
               id={`payment-amount-${loanId}`}
               type="number"
@@ -187,12 +198,14 @@ export function LoanPaymentHistory({
               max={outstanding}
               value={addAmount}
               onChange={(event) => setAddAmount(event.target.value)}
-              placeholder={`Max ${formatCurrency(outstanding)}`}
+              placeholder={t("maxAmount", {
+                amount: formatCurrency(outstanding, locale),
+              })}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`payment-date-${loanId}`}>Payment date</Label>
+            <Label htmlFor={`payment-date-${loanId}`}>{t("paymentDate")}</Label>
             <DatePicker
               id={`payment-date-${loanId}`}
               value={addDate}
@@ -200,7 +213,7 @@ export function LoanPaymentHistory({
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor={`payment-note-${loanId}`}>Note (optional)</Label>
+            <Label htmlFor={`payment-note-${loanId}`}>{t("noteOptional")}</Label>
             <Textarea
               id={`payment-note-${loanId}`}
               value={addNote}
@@ -210,7 +223,7 @@ export function LoanPaymentHistory({
           </div>
           <div className="sm:col-span-2">
             <Button type="submit" size="sm" disabled={adding}>
-              {adding ? "Saving..." : "Save payment"}
+              {adding ? tc("saving") : t("savePayment")}
             </Button>
           </div>
         </form>
@@ -220,7 +233,7 @@ export function LoanPaymentHistory({
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border/70 px-4 py-8 text-center">
           <Banknote className="h-8 w-8 text-muted-foreground/60" />
           <p className="text-sm text-muted-foreground">
-            No payments recorded yet for {clientName}.
+            {t("noPayments", { clientName })}
           </p>
           {outstanding > 0 && !showAddForm ? (
             <Button
@@ -229,8 +242,8 @@ export function LoanPaymentHistory({
               size="sm"
               onClick={() => setShowAddForm(true)}
             >
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Record first payment
+              <Plus className="me-1.5 h-3.5 w-3.5" />
+              {t("recordFirstPayment")}
             </Button>
           ) : null}
         </div>
@@ -238,11 +251,11 @@ export function LoanPaymentHistory({
         <div className="overflow-x-auto rounded-lg border border-border/60">
           <table className="w-full min-w-[480px] text-sm">
             <thead>
-              <tr className="border-b border-border/60 bg-muted/30 text-left text-muted-foreground">
-                <th className="px-3 py-2 font-medium">Date</th>
-                <th className="px-3 py-2 font-medium">Amount</th>
-                <th className="px-3 py-2 font-medium">Note</th>
-                <th className="px-3 py-2 text-right font-medium">Actions</th>
+              <tr className="border-b border-border/60 bg-muted/30 text-start text-muted-foreground">
+                <th className="px-3 py-2 font-medium">{tc("date")}</th>
+                <th className="px-3 py-2 font-medium">{tc("amount")}</th>
+                <th className="px-3 py-2 font-medium">{tc("note")}</th>
+                <th className="px-3 py-2 text-end font-medium">{tc("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -252,10 +265,10 @@ export function LoanPaymentHistory({
                   className="border-b border-border/40 last:border-0"
                 >
                   <td className="px-3 py-2.5 whitespace-nowrap">
-                    {format(new Date(payment.paidAt), "MMM d, yyyy")}
+                    {formatDate(payment.paidAt, locale)}
                   </td>
                   <td className="px-3 py-2.5 font-medium text-success tabular-nums">
-                    {formatCurrency(payment.amount)}
+                    {formatCurrency(payment.amount, locale)}
                   </td>
                   <td className="px-3 py-2.5 text-muted-foreground">
                     {payment.note || "—"}
@@ -267,7 +280,9 @@ export function LoanPaymentHistory({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => setPaymentToEdit(payment)}
-                        aria-label={`Edit payment of ${formatCurrency(payment.amount)}`}
+                        aria-label={t("editPaymentAria", {
+                          amount: formatCurrency(payment.amount, locale),
+                        })}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -276,7 +291,9 @@ export function LoanPaymentHistory({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => setPaymentToDelete(payment)}
-                        aria-label={`Delete payment of ${formatCurrency(payment.amount)}`}
+                        aria-label={t("deletePaymentAria", {
+                          amount: formatCurrency(payment.amount, locale),
+                        })}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
@@ -21,10 +22,12 @@ export function DateRangePicker({
   onFromChange,
   onToChange,
   onClear,
-  label = "Date range",
+  label,
   className,
 }: DateRangePickerProps) {
+  const t = useTranslations("common");
   const hasRange = Boolean(from || to);
+  const rangeLabel = label ?? t("dateRange");
 
   return (
     <div
@@ -33,13 +36,13 @@ export function DateRangePicker({
         className
       )}
     >
-      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-muted-foreground">{rangeLabel}</span>
       <div className="flex min-w-0 items-center rounded-lg border border-border/70 bg-muted/20">
         <DatePicker
           id="date-range-from"
           value={from}
           onChange={onFromChange}
-          placeholder="From"
+          placeholder={t("dateFrom")}
           max={to || undefined}
           variant="inline"
           className="min-w-30 flex-1 sm:min-w-35"
@@ -51,7 +54,7 @@ export function DateRangePicker({
           id="date-range-to"
           value={to}
           onChange={onToChange}
-          placeholder="To"
+          placeholder={t("dateTo")}
           min={from || undefined}
           variant="inline"
           className="min-w-30 flex-1 sm:min-w-35"
@@ -62,9 +65,9 @@ export function DateRangePicker({
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="mr-1 shrink-0 text-muted-foreground hover:text-foreground"
+            className="me-1 shrink-0 text-muted-foreground hover:text-foreground"
             onClick={onClear}
-            aria-label="Clear date range"
+            aria-label={t("clearDateRange")}
           >
             <X className="h-3.5 w-3.5" />
           </Button>

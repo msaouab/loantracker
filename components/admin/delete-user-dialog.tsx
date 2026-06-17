@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -31,6 +32,8 @@ export function DeleteUserDialog({
   fullName,
   onDeleted,
 }: DeleteUserDialogProps) {
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
   const [deleting, setDeleting] = useState(false);
 
   async function handleConfirm() {
@@ -44,9 +47,9 @@ export function DeleteUserDialog({
       await deleteAdminUser(userId);
       onOpenChange(false);
       onDeleted?.();
-      notifySuccess(fullName ? `Removed ${fullName}` : "User removed");
+      notifySuccess(fullName ? t("removedNamed", { name: fullName }) : t("userRemoved"));
     } catch (deleteError) {
-      notifyError(deleteError, "Failed to delete user");
+      notifyError(deleteError, t("failedUpdateUser"));
     } finally {
       setDeleting(false);
     }
@@ -59,22 +62,22 @@ export function DeleteUserDialog({
           <AlertDialogMedia className="bg-destructive/10 text-destructive">
             <Trash2 />
           </AlertDialogMedia>
-          <AlertDialogTitle>Remove user account?</AlertDialogTitle>
+          <AlertDialogTitle>{t("deleteUserTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
             {fullName
-              ? `This will permanently delete ${fullName}'s account and all associated loan records. This action cannot be undone.`
-              : "This will permanently delete this user account and all associated loan records. This action cannot be undone."}
+              ? t("deleteUserDescriptionNamed", { name: fullName })
+              : t("deleteUserDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={deleting}>{tc("cancel")}</AlertDialogCancel>
           <Button
             variant="destructive"
             disabled={deleting || !userId}
             onClick={handleConfirm}
           >
-            {deleting ? "Removing..." : "Remove user"}
+            {deleting ? tc("removing") : t("removeUser")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

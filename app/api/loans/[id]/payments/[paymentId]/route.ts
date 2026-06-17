@@ -11,11 +11,12 @@ import {
   serializePayment,
   updatePayment,
 } from "@/lib/loans-service";
-import { loanPaymentSchema } from "@/lib/validations";
+import { getLoanPaymentSchema } from "@/lib/validations";
 
 export const PUT = withManager<{ id: string; paymentId: string }>(
   async (req, userId, { params }) => {
     const { id, paymentId } = await params;
+    const loanPaymentSchema = await getLoanPaymentSchema();
     const input = parseOrThrow(loanPaymentSchema, await req.json());
     const loan = await getOwnedLoanOrThrow(prisma, userId, id);
     const { payment, amountPaid, outstanding } = await updatePayment(

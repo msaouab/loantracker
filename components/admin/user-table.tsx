@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { format } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import { Check, Plus, RefreshCw, ShieldBan, Snowflake } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
@@ -24,19 +24,64 @@ import {
   updateAdminUser,
   type AdminUser,
 } from "@/lib/admin-client";
-import { ACCOUNT_STATUS_LABELS } from "@/lib/users";
+import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
+import { isOnline } from "@/lib/presence";
 
-function StatusBadge({ status }: { status: AdminUser["status"] }) {
+function PresenceDot({
+  lastSeenAt,
+  labels,
+  locale,
+}: {
+  lastSeenAt: string | null;
+  labels: { online: string; offline: string; lastSeen: (time: string) => string };
+  locale: AppLocale;
+}) {
+  const online = isOnline(lastSeenAt);
+  const label = online
+    ? labels.online
+    : lastSeenAt
+      ? labels.lastSeen(formatRelativeTime(lastSeenAt, locale))
+      : labels.offline;
+  return (
+    <span
+      className={`inline-block size-2 shrink-0 rounded-full ${online ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+      title={label}
+      aria-label={label}
+    />
+  );
+}
+
+function StatusBadge({
+  status,
+  labels,
+}: {
+  status: AdminUser["status"];
+  labels: { active: string; frozen: string; pending: string };
+}) {
   if (status === "active") {
-    return <Badge variant="secondary">{ACCOUNT_STATUS_LABELS.active}</Badge>;
+    return <Badge variant="secondary">{labels.active}</Badge>;
   }
   if (status === "frozen") {
-    return <Badge variant="destructive">{ACCOUNT_STATUS_LABELS.frozen}</Badge>;
+    return <Badge variant="destructive">{labels.frozen}</Badge>;
   }
-  return <Badge>{ACCOUNT_STATUS_LABELS.pending}</Badge>;
+  return <Badge>{labels.pending}</Badge>;
 }
 
 export function UserTable() {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
+  const statusLabels = {
+    active: t("statusActive"),
+    frozen: t("statusFrozen"),
+    pending: t("statusPending"),
+  };
+  const presenceLabels = {
+    online: t("online"),
+    offline: t("offline"),
+    lastSeen: (time: string) => t("lastSeen", { time }),
+  };
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
@@ -49,11 +94,11 @@ export function UserTable() {
       const data = await fetchAdminUsers();
       setUsers(data);
     } catch (error) {
-      notifyError(error, "Failed to load users");
+      notifyError(error, t("failedLoadUsers"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +109,7 @@ export function UserTable() {
       })
       .catch((error) => {
         if (!cancelled) {
-          notifyError(error, "Failed to load users");
+          notifyError(error, t("failedLoadUsers"));
         }
       })
       .finally(() => {
@@ -74,7 +119,7 @@ export function UserTable() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   async function handleAction(
     userId: string,
@@ -85,14 +130,14 @@ export function UserTable() {
       await updateAdminUser(userId, action);
       notifySuccess(
         action === "approve"
-          ? "User approved"
+          ? t("userApproved")
           : action === "freeze"
-            ? "User frozen"
-            : "User unfrozen"
+            ? t("userFrozen")
+            : t("userUnfrozen")
       );
       await loadUsers();
     } catch (error) {
-      notifyError(error, "Failed to update user");
+      notifyError(error, t("failedUpdateUser"));
     } finally {
       setActionUserId(null);
     }
@@ -105,22 +150,27 @@ export function UserTable() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="User accounts"
+        title={t("userAccounts")}
         description={
           loading
-            ? "Loading users..."
-            : `${users.length} user${users.length === 1 ? "" : "s"} · ${pendingCount} pending · ${activeCount} active · ${frozenCount} frozen`
+            ? t("loadingUsers")
+            : t("usersSummary", {
+                total: users.length,
+                pending: pendingCount,
+                active: activeCount,
+                frozen: frozenCount,
+              })
         }
       >
         <PageHeaderAction
-          label="Refresh"
+          label={tc("refresh")}
           icon={RefreshCw}
           variant="outline"
           onClick={loadUsers}
           disabled={loading}
         />
         <PageHeaderAction
-          label="Create user"
+          label={t("createUser")}
           icon={Plus}
           onClick={() => setCreateOpen(true)}
           className="shadow-sm shadow-primary/20"
@@ -131,13 +181,13 @@ export function UserTable() {
         <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Registered</TableHead>
-                <TableHead>Last login</TableHead>
-                <TableHead>Loans</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("columnName")}</TableHead>
+                <TableHead>{t("columnEmail")}</TableHead>
+                <TableHead>{t("columnStatus")}</TableHead>
+                <TableHead>{t("columnRegistered")}</TableHead>
+                <TableHead>{t("columnLastLogin")}</TableHead>
+                <TableHead>{t("columnLoans")}</TableHead>
+                <TableHead className="text-end">{tc("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -159,7 +209,7 @@ export function UserTable() {
                     colSpan={7}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    No users found.
+                    {t("noUsers")}
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -171,35 +221,39 @@ export function UserTable() {
                     return (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
-                          <Link
-                            href={`/admin/users/${user.id}`}
-                            className="hover:text-primary hover:underline"
-                          >
-                            {user.fullName}
-                          </Link>
+                          <span className="inline-flex items-center gap-2">
+                            <PresenceDot
+                              lastSeenAt={user.lastSeenAt}
+                              labels={presenceLabels}
+                              locale={locale}
+                            />
+                            <Link
+                              href={`/admin/users/${user.id}`}
+                              className="hover:text-primary hover:underline"
+                            >
+                              {user.fullName}
+                            </Link>
+                          </span>
                           {user.isAdmin ? (
-                            <Badge variant="outline" className="ml-2">
-                              Admin
+                            <Badge variant="outline" className="ms-2">
+                              {t("badgeAdmin")}
                             </Badge>
                           ) : null}
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
-                          <StatusBadge status={user.status} />
+                          <StatusBadge status={user.status} labels={statusLabels} />
                         </TableCell>
                         <TableCell>
-                          {format(new Date(user.createdAt), "MMM d, yyyy")}
+                          {formatDate(user.createdAt, locale)}
                         </TableCell>
                         <TableCell>
                           {user.lastLoginAt
-                            ? format(
-                                new Date(user.lastLoginAt),
-                                "MMM d, yyyy h:mm a"
-                              )
-                            : "Never"}
+                            ? formatDateTime(user.lastLoginAt, locale)
+                            : tc("never")}
                         </TableCell>
                         <TableCell>{user.loanCount}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           {user.isAdmin ? (
                             <span className="text-sm text-muted-foreground">
                               —
@@ -214,8 +268,8 @@ export function UserTable() {
                                     handleAction(user.id, "approve")
                                   }
                                 >
-                                  <Check className="mr-1.5 h-3.5 w-3.5" />
-                                  Approve
+                                  <Check className="me-1.5 h-3.5 w-3.5" />
+                                  {tc("approve")}
                                 </Button>
                               ) : null}
 
@@ -226,8 +280,8 @@ export function UserTable() {
                                   disabled={isBusy}
                                   onClick={() => handleAction(user.id, "freeze")}
                                 >
-                                  <Snowflake className="mr-1.5 h-3.5 w-3.5" />
-                                  Freeze
+                                  <Snowflake className="me-1.5 h-3.5 w-3.5" />
+                                  {tc("freeze")}
                                 </Button>
                               ) : null}
 
@@ -240,8 +294,8 @@ export function UserTable() {
                                     handleAction(user.id, "unfreeze")
                                   }
                                 >
-                                  <ShieldBan className="mr-1.5 h-3.5 w-3.5" />
-                                  Unfreeze
+                                  <ShieldBan className="me-1.5 h-3.5 w-3.5" />
+                                  {tc("unfreeze")}
                                 </Button>
                               ) : null}
 
@@ -251,7 +305,7 @@ export function UserTable() {
                                 disabled={isBusy}
                                 onClick={() => setUserToDelete(user)}
                               >
-                                Remove
+                                {tc("remove")}
                               </Button>
                             </div>
                           )}
@@ -280,7 +334,7 @@ export function UserTable() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={() => {
-          notifySuccess("User created");
+          notifySuccess(t("userCreated"));
           void loadUsers();
         }}
       />

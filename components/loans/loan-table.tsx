@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useState } from "react";
-import { format } from "date-fns";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   ChevronDown,
   ChevronRight,
@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency, formatRecoveredRetention } from "@/lib/loans";
+import { formatDate } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 import type { LoanStatus } from "@/lib/loan-status";
 import { DEFAULT_LOAN_SORT, type LoanSortField } from "@/lib/loan-sort-types";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -63,6 +65,20 @@ export function LoanTable({
   title = "Loan Records",
   emptyMessage = "No loan records found.",
 }: LoanTableProps) {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
+  const retentionLabels = useMemo(
+    () => ({
+      today: t("retentionToday"),
+      oneDayAgo: t("retentionOneDayAgo"),
+      daysAgo: (count: number) => t("retentionDaysAgo", { count }),
+      deletesToday: t("retentionDeletesToday"),
+      oneDayLeft: t("retentionOneDayLeft"),
+      daysLeft: (count: number) => t("retentionDaysLeft", { count }),
+    }),
+    [t]
+  );
   const [loans, setLoans] = useState<Loan[]>([]);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -78,6 +94,7 @@ export function LoanTable({
   const [loanToDelete, setLoanToDelete] = useState<{
     id: string;
     clientName: string;
+    totalAmount: number;
   } | null>(null);
   const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(
     () => new Set()
@@ -103,11 +120,11 @@ export function LoanTable({
       setTotal(data.pagination.total);
     } catch (loadError) {
       setLoadFailed(true);
-      notifyError(loadError, "Failed to load loans");
+      notifyError(loadError, t("failedLoad"));
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, dateFrom, dateTo, sortBy, sortOrder, status]);
+  }, [page, pageSize, search, dateFrom, dateTo, sortBy, sortOrder, status, t]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -117,7 +134,11 @@ export function LoanTable({
   }, [loadLoans]);
 
   function requestDelete(loan: Loan) {
-    setLoanToDelete({ id: loan.id, clientName: loan.clientName });
+    setLoanToDelete({
+      id: loan.id,
+      clientName: loan.clientName,
+      totalAmount: loan.totalAmount,
+    });
   }
 
   function toggleExpanded(loanId: string) {
@@ -172,26 +193,26 @@ export function LoanTable({
     />
   );
 
+  const description = loading
+    ? t("loadingPortfolio")
+    : loadFailed
+      ? t("unableToLoad")
+      : status === "completed"
+        ? `${t("recordsCount", { total })}${t("recoveredRetentionSuffix")}${hasActiveFilters ? t("matchingFilters") : ""}`
+        : `${t("recordsCount", { total })}${hasActiveFilters ? t("matchingFilters") : ""}`;
+
   return (
     <div className="space-y-4">
       <PageHeader
         title={title}
-        description={
-          loading
-            ? "Loading portfolio..."
-            : loadFailed
-              ? "Unable to load portfolio"
-              : status === "completed"
-                ? `${total} record${total === 1 ? "" : "s"} · removed 30 days after full payment${hasActiveFilters ? " matching filters" : ""}`
-                : `${total} record${total === 1 ? "" : "s"}${hasActiveFilters ? " matching filters" : ""}`
-        }
+        description={description}
         toolbar={
           <div className={PAGE_HEADER_TOOLBAR_CLASS}>
             <div className="relative min-w-0 flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                className="h-10 border-border/70 bg-muted/20 pl-9"
-                placeholder="Search client or amount..."
+                className="h-10 border-border/70 bg-muted/20 ps-9"
+                placeholder={t("searchPlaceholder")}
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -224,7 +245,7 @@ export function LoanTable({
       >
         <PageHeaderAction
           href="/loans/new"
-          label="Add New Loan"
+          label={t("addNewLoan")}
           icon={Plus}
           className="shadow-sm shadow-primary/20"
         />
@@ -240,9 +261,9 @@ export function LoanTable({
             onClick={() => loadLoans()}
           >
             <RefreshCw
-              className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")}
+              className={cn("me-1.5 h-3.5 w-3.5", loading && "animate-spin")}
             />
-            {loading ? "Retrying..." : "Retry"}
+            {loading ? tc("retrying") : tc("retry")}
           </Button>
         </div>
       ) : null}
@@ -281,8 +302,8 @@ export function LoanTable({
                           aria-expanded={isExpanded}
                           aria-label={
                             isExpanded
-                              ? `Hide payment history for ${loan.clientName}`
-                              : `Show payment history for ${loan.clientName}`
+                              ? t("hidePaymentHistory", { clientName: loan.clientName })
+                              : t("showPaymentHistory", { clientName: loan.clientName })
                           }
                         >
                           {isExpanded ? (
@@ -297,11 +318,11 @@ export function LoanTable({
                           {loan.clientName}
                         </Link>
                       </TableCell>
-                      <TableCell>{formatCurrency(loan.totalAmount)}</TableCell>
+                      <TableCell>{formatCurrency(loan.totalAmount, locale)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-success tabular-nums">
-                            {formatCurrency(loan.amountPaid)}
+                            {formatCurrency(loan.amountPaid, locale)}
                           </span>
                           {loan.paymentCount > 0 ? (
                             <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
@@ -311,18 +332,18 @@ export function LoanTable({
                         </div>
                       </TableCell>
                       <TableCell className="font-medium text-destructive tabular-nums">
-                        {formatCurrency(loan.outstanding)}
+                        {formatCurrency(loan.outstanding, locale)}
                       </TableCell>
-                      <TableCell>{format(new Date(loan.loanDate), "MMM d, yyyy")}</TableCell>
+                      <TableCell>{formatDate(loan.loanDate, locale)}</TableCell>
                       <TableCell>
                         <TrustBadge trusted={loan.clientTrust} />
                       </TableCell>
                       {status === "completed" ? (
                         <TableCell className="text-sm text-muted-foreground">
-                          {formatRecoveredRetention(loan.recoveredAt ?? null) ?? "—"}
+                          {formatRecoveredRetention(loan.recoveredAt ?? null, locale, retentionLabels) ?? "—"}
                         </TableCell>
                       ) : null}
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="icon" asChild>
                             <Link href={`/loans/${loan.id}/edit`}>
@@ -333,7 +354,7 @@ export function LoanTable({
                             variant="ghost"
                             size="icon"
                             onClick={() => requestDelete(loan)}
-                            aria-label={`Delete loan for ${loan.clientName}`}
+                            aria-label={t("deleteLoanAria", { clientName: loan.clientName })}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -390,7 +411,7 @@ export function LoanTable({
             disabled={page <= 1}
             onClick={() => setPage((current) => current - 1)}
           >
-            Previous
+            {tc("previous")}
           </Button>
 
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-6">
@@ -399,7 +420,7 @@ export function LoanTable({
                 htmlFor="loan-page-size"
                 className="text-sm text-muted-foreground whitespace-nowrap"
               >
-                Rows per page
+                {t("rowsPerPage")}
               </label>
               <select
                 id="loan-page-size"
@@ -418,7 +439,7 @@ export function LoanTable({
               </select>
             </div>
             <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
+              {t("pageOf", { page, totalPages })}
             </span>
           </div>
 
@@ -428,7 +449,7 @@ export function LoanTable({
             disabled={page >= totalPages}
             onClick={() => setPage((current) => current + 1)}
           >
-            Next
+            {tc("next")}
           </Button>
         </div>
       ) : null}
@@ -442,6 +463,7 @@ export function LoanTable({
         }}
         loanId={loanToDelete?.id ?? null}
         clientName={loanToDelete?.clientName}
+        totalAmount={loanToDelete?.totalAmount}
         onDeleted={loadLoans}
       />
     </div>

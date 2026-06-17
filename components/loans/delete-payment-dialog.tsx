@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/loans";
+import type { AppLocale } from "@/lib/locale";
 import {
   deleteLoanPayment,
   type LoanPayment,
@@ -37,7 +39,26 @@ export function DeletePaymentDialog({
   payment,
   onDeleted,
 }: DeletePaymentDialogProps) {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
   const [deleting, setDeleting] = useState(false);
+
+  const highlight = (chunks: React.ReactNode) => (
+    <span className="font-semibold text-foreground">{chunks}</span>
+  );
+
+  const description =
+    payment != null
+      ? t.rich("deletePaymentDescriptionAmount", {
+          amount: formatCurrency(payment.amount, locale),
+          clientName,
+          highlight,
+        })
+      : t.rich("deletePaymentDescription", {
+          clientName,
+          highlight,
+        });
 
   async function handleConfirm() {
     if (!payment) {
@@ -50,9 +71,11 @@ export function DeletePaymentDialog({
       await deleteLoanPayment(loanId, payment.id);
       onOpenChange(false);
       onDeleted?.();
-      notifySuccess(`Deleted ${formatCurrency(payment.amount)} payment`);
+      notifySuccess(
+        t("paymentDeleted", { amount: formatCurrency(payment.amount, locale) })
+      );
     } catch (deleteError) {
-      notifyError(deleteError, "Failed to delete payment");
+      notifyError(deleteError, t("failedDeletePayment"));
     } finally {
       setDeleting(false);
     }
@@ -65,40 +88,18 @@ export function DeletePaymentDialog({
           <AlertDialogMedia className="bg-destructive/10 text-destructive">
             <Trash2 />
           </AlertDialogMedia>
-          <AlertDialogTitle>Delete payment?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {payment ? (
-              <>
-                This will remove the{" "}
-                <strong className="font-semibold text-foreground">
-                  {formatCurrency(payment.amount)}
-                </strong>{" "}
-                payment for{" "}
-                <strong className="font-semibold text-foreground">
-                  {clientName}
-                </strong>{" "}
-                from the loan history. The total paid amount will be recalculated.
-              </>
-            ) : (
-              <>
-                This will remove the payment for{" "}
-                <strong className="font-semibold text-foreground">
-                  {clientName}
-                </strong>{" "}
-                from the loan history.
-              </>
-            )}
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("deletePaymentTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={deleting}>{tc("cancel")}</AlertDialogCancel>
           <Button
             variant="destructive"
             disabled={deleting || !payment}
             onClick={handleConfirm}
           >
-            {deleting ? "Deleting..." : "Delete"}
+            {deleting ? tc("deleting") : tc("delete")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

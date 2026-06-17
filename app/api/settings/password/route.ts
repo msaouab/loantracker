@@ -7,9 +7,10 @@ import {
   logActivityFromRequest,
 } from "@/lib/activity-log-service";
 import { changeUserPassword } from "@/lib/user-settings-service";
-import { changePasswordSchema } from "@/lib/validations";
+import { getChangePasswordSchema } from "@/lib/validations";
 
 export const PATCH = withUser(async (req, userId) => {
+  const changePasswordSchema = await getChangePasswordSchema();
   const input = parseOrThrow(changePasswordSchema, await req.json());
   await changeUserPassword(userId, input.currentPassword, input.newPassword);
 

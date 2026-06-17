@@ -22,7 +22,7 @@ async function readJson(response: Response) {
 
 describe("toErrorResponse (unified envelope)", () => {
   it("maps validation errors to a fields payload", async () => {
-    const response = toErrorResponse(
+    const response = await toErrorResponse(
       new ValidationError({ email: ["Invalid email"] })
     );
 
@@ -38,7 +38,7 @@ describe("toErrorResponse (unified envelope)", () => {
   });
 
   it("maps typed app errors to a message + code", async () => {
-    const response = toErrorResponse(new UnauthorizedError());
+    const response = await toErrorResponse(new UnauthorizedError());
 
     expect(response.status).toBe(401);
     await expect(readJson(response)).resolves.toEqual({
@@ -48,12 +48,12 @@ describe("toErrorResponse (unified envelope)", () => {
   });
 
   it("maps forbidden and not-found errors", async () => {
-    expect(toErrorResponse(new ForbiddenError()).status).toBe(403);
-    expect(toErrorResponse(new NotFoundError("Loan not found")).status).toBe(404);
+    expect((await toErrorResponse(new ForbiddenError())).status).toBe(403);
+    expect((await toErrorResponse(new NotFoundError("Loan not found"))).status).toBe(404);
   });
 
   it("maps unknown errors to 500", async () => {
-    const response = toErrorResponse(new AppError("Bad gateway", 502));
+    const response = await toErrorResponse(new AppError("Bad gateway", 502));
 
     expect(response.status).toBe(502);
     await expect(readJson(response)).resolves.toEqual({

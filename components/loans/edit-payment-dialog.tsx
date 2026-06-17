@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Pencil } from "lucide-react";
 import {
   AlertDialog,
@@ -19,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { dateParamToIso, formatDateParam } from "@/lib/dates";
 import { formatCurrency } from "@/lib/loans";
+import type { AppLocale } from "@/lib/locale";
 import {
   updateLoanPayment,
   type LoanPayment,
@@ -50,6 +52,9 @@ export function EditPaymentDialog({
   maxAmount,
   onUpdated,
 }: EditPaymentDialogProps) {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("loans");
+  const tc = useTranslations("common");
   const [amount, setAmount] = useState(() => paymentFormState(payment).amount);
   const [paidAt, setPaidAt] = useState(() => paymentFormState(payment).paidAt);
   const [note, setNote] = useState(() => paymentFormState(payment).note);
@@ -60,7 +65,7 @@ export function EditPaymentDialog({
 
     const parsedAmount = Math.round(Number(amount));
     if (!parsedAmount || parsedAmount <= 0) {
-      notifyError(null, "Enter a valid payment amount");
+      notifyError(null, t("invalidAmount"));
       return;
     }
 
@@ -74,9 +79,9 @@ export function EditPaymentDialog({
       });
       onOpenChange(false);
       onUpdated?.();
-      notifySuccess("Payment updated");
+      notifySuccess(t("paymentUpdated"));
     } catch (submitError) {
-      notifyError(submitError, "Failed to update payment");
+      notifyError(submitError, t("failedUpdatePayment"));
     } finally {
       setSaving(false);
     }
@@ -90,15 +95,17 @@ export function EditPaymentDialog({
             <AlertDialogMedia>
               <Pencil />
             </AlertDialogMedia>
-            <AlertDialogTitle>Edit payment</AlertDialogTitle>
+            <AlertDialogTitle>{t("editPayment")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Update the {formatCurrency(payment.amount)} payment record.
+              {t("editPaymentDescription", {
+                amount: formatCurrency(payment.amount, locale),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="grid gap-3 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-payment-amount">Amount</Label>
+              <Label htmlFor="edit-payment-amount">{tc("amount")}</Label>
               <Input
                 id="edit-payment-amount"
                 type="number"
@@ -111,7 +118,7 @@ export function EditPaymentDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-payment-date">Payment date</Label>
+              <Label htmlFor="edit-payment-date">{t("paymentDate")}</Label>
               <DatePicker
                 id="edit-payment-date"
                 value={paidAt}
@@ -119,7 +126,7 @@ export function EditPaymentDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-payment-note">Note (optional)</Label>
+              <Label htmlFor="edit-payment-note">{t("noteOptional")}</Label>
               <Textarea
                 id="edit-payment-note"
                 value={note}
@@ -130,9 +137,9 @@ export function EditPaymentDialog({
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={saving}>{tc("cancel")}</AlertDialogCancel>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? tc("saving") : t("saveChanges")}
             </Button>
           </AlertDialogFooter>
         </form>

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { format } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import { Check, ShieldBan, Snowflake } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
@@ -27,25 +27,41 @@ import {
   type AdminUser,
 } from "@/lib/admin-client";
 import { ApiRequestError } from "@/lib/api-client";
-import { ACCOUNT_STATUS_LABELS } from "@/lib/users";
+import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
+import { isOnline } from "@/lib/presence";
+import type { AppLocale } from "@/lib/locale";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="text-sm text-destructive">{message}</p>;
 }
 
-function StatusBadge({ status }: { status: AdminUser["status"] }) {
+function StatusBadge({
+  status,
+  labels,
+}: {
+  status: AdminUser["status"];
+  labels: { active: string; frozen: string; pending: string };
+}) {
   if (status === "active") {
-    return <Badge variant="secondary">{ACCOUNT_STATUS_LABELS.active}</Badge>;
+    return <Badge variant="secondary">{labels.active}</Badge>;
   }
   if (status === "frozen") {
-    return <Badge variant="destructive">{ACCOUNT_STATUS_LABELS.frozen}</Badge>;
+    return <Badge variant="destructive">{labels.frozen}</Badge>;
   }
-  return <Badge>{ACCOUNT_STATUS_LABELS.pending}</Badge>;
+  return <Badge>{labels.pending}</Badge>;
 }
 
 export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
+  const statusLabels = {
+    active: t("statusActive"),
+    frozen: t("statusFrozen"),
+    pending: t("statusPending"),
+  };
   const [user, setUser] = useState(initialUser);
   const [fullName, setFullName] = useState(initialUser.fullName);
   const [email, setEmail] = useState(initialUser.email);
@@ -72,13 +88,13 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
       setUser(updated);
       setFullName(updated.fullName);
       setEmail(updated.email);
-      notifySuccess("User profile updated");
+      notifySuccess(t("profileUpdated"));
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError && error.fieldErrors) {
         setProfileErrors(error.fieldErrors);
       } else {
-        notifyError(error, "Failed to update user");
+        notifyError(error, t("failedUpdateProfile"));
       }
     } finally {
       setProfileLoading(false);
@@ -99,14 +115,14 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
 
     try {
       await resetAdminUserPassword(user.id, payload);
-      notifySuccess("Password reset. The user will need to sign in again.");
+      notifySuccess(t("passwordResetSuccess"));
       form.reset();
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError && error.fieldErrors) {
         setPasswordErrors(error.fieldErrors);
       } else {
-        notifyError(error, "Failed to reset password");
+        notifyError(error, t("failedResetPassword"));
       }
     } finally {
       setPasswordLoading(false);
@@ -121,14 +137,14 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
       setUser(data.user);
       notifySuccess(
         action === "approve"
-          ? "User approved"
+          ? t("userApproved")
           : action === "freeze"
-            ? "User frozen"
-            : "User unfrozen"
+            ? t("userFrozen")
+            : t("userUnfrozen")
       );
       router.refresh();
     } catch (error) {
-      notifyError(error, "Failed to update user status");
+      notifyError(error, t("failedUpdateStatus"));
     } finally {
       setActionUserId(null);
     }
@@ -140,28 +156,42 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
     <div className="space-y-4">
       <Card className="surface-card border-0 ring-1 ring-foreground/10">
         <CardHeader>
-          <CardTitle>Account</CardTitle>
-          <CardDescription>Status and access controls for this manager.</CardDescription>
+          <CardTitle>{t("accountTitle")}</CardTitle>
+          <CardDescription>{t("accountDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={user.status} />
-            <span className="text-sm text-muted-foreground">
-              Registered {format(new Date(user.createdAt), "MMM d, yyyy")}
+            <StatusBadge status={user.status} labels={statusLabels} />
+            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+              <span
+                className={`inline-block size-2 shrink-0 rounded-full ${isOnline(user.lastSeenAt) ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+                aria-hidden
+              />
+              {isOnline(user.lastSeenAt)
+                ? t("online")
+                : user.lastSeenAt
+                  ? t("lastSeen", { time: formatRelativeTime(user.lastSeenAt, locale) })
+                  : t("offline")}
             </span>
             <span className="text-sm text-muted-foreground">
-              Last login{" "}
-              {user.lastLoginAt
-                ? format(new Date(user.lastLoginAt), "MMM d, yyyy h:mm a")
-                : "Never"}
+              {t("registered", {
+                date: formatDate(user.createdAt, locale),
+              })}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {t("lastLogin", {
+                date: user.lastLoginAt
+                  ? formatDateTime(user.lastLoginAt, locale)
+                  : tc("never"),
+              })}
             </span>
           </div>
 
           <div className="flex flex-wrap gap-2">
             {user.status === "pending" ? (
               <Button size="sm" disabled={isBusy} onClick={() => handleAction("approve")}>
-                <Check className="mr-1.5 h-3.5 w-3.5" />
-                Approve
+                <Check className="me-1.5 h-3.5 w-3.5" />
+                {tc("approve")}
               </Button>
             ) : null}
             {user.status === "active" ? (
@@ -171,8 +201,8 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
                 disabled={isBusy}
                 onClick={() => handleAction("freeze")}
               >
-                <Snowflake className="mr-1.5 h-3.5 w-3.5" />
-                Freeze
+                <Snowflake className="me-1.5 h-3.5 w-3.5" />
+                {tc("freeze")}
               </Button>
             ) : null}
             {user.status === "frozen" ? (
@@ -182,8 +212,8 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
                 disabled={isBusy}
                 onClick={() => handleAction("unfreeze")}
               >
-                <ShieldBan className="mr-1.5 h-3.5 w-3.5" />
-                Unfreeze
+                <ShieldBan className="me-1.5 h-3.5 w-3.5" />
+                {tc("unfreeze")}
               </Button>
             ) : null}
             <Button
@@ -192,7 +222,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
               disabled={isBusy}
               onClick={() => setDeleteOpen(true)}
             >
-              Remove user
+              {t("removeUser")}
             </Button>
           </div>
         </CardContent>
@@ -200,13 +230,13 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
 
       <Card className="surface-card border-0 ring-1 ring-foreground/10">
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Edit this manager&apos;s name and email.</CardDescription>
+          <CardTitle>{t("profileTitle")}</CardTitle>
+          <CardDescription>{t("profileDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full name</Label>
+              <Label htmlFor="fullName">{tc("fullName")}</Label>
               <Input
                 id="fullName"
                 value={fullName}
@@ -218,7 +248,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{tc("email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -230,7 +260,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
             </div>
 
             <Button type="submit" disabled={profileLoading || !profileDirty}>
-              {profileLoading ? "Saving..." : "Save profile"}
+              {profileLoading ? tc("saving") : t("saveProfile")}
             </Button>
           </form>
         </CardContent>
@@ -238,15 +268,13 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
 
       <Card className="surface-card border-0 ring-1 ring-foreground/10">
         <CardHeader>
-          <CardTitle>Password</CardTitle>
-          <CardDescription>
-            Set a new password for this user. They will be signed out of all devices.
-          </CardDescription>
+          <CardTitle>{t("passwordTitle")}</CardTitle>
+          <CardDescription>{t("passwordDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="newPassword">New password</Label>
+              <Label htmlFor="newPassword">{t("newPassword")}</Label>
               <PasswordInput id="newPassword" name="newPassword" minLength={8} required />
               <FieldError message={passwordErrors.newPassword?.[0]} />
             </div>
@@ -254,7 +282,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
             <Separator />
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Label htmlFor="confirmPassword">{t("confirmNewPassword")}</Label>
               <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
@@ -265,7 +293,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
             </div>
 
             <Button type="submit" disabled={passwordLoading}>
-              {passwordLoading ? "Updating..." : "Reset password"}
+              {passwordLoading ? tc("updating") : t("resetPassword")}
             </Button>
           </form>
         </CardContent>
@@ -277,7 +305,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
         userId={user.id}
         fullName={user.fullName}
         onDeleted={() => {
-          notifySuccess("User removed");
+          notifySuccess(t("userRemoved"));
           router.push("/admin/users");
           router.refresh();
         }}

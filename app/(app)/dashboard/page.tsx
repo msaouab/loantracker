@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { Plus } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 import { DashboardCharts } from "@/components/dashboard/charts";
 import { DashboardRefreshButton } from "@/components/dashboard/dashboard-refresh-button";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { getDashboardStats } from "@/lib/dashboard";
+import { formatDateTime } from "@/lib/format";
+import type { AppLocale } from "@/lib/locale";
 import { getSession, redirectToLogin } from "@/lib/session";
 import { redirect } from "next/navigation";
 
@@ -20,18 +22,24 @@ export default async function DashboardPage() {
     redirect("/admin/dashboard");
   }
 
-  const stats = await getDashboardStats(session.user.id);
+  const [stats, t, locale] = await Promise.all([
+    getDashboardStats(session.user.id),
+    getTranslations("dashboard"),
+    getLocale(),
+  ]);
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Dashboard"
-        description={`Overview of your loan portfolio. Last updated ${format(new Date(stats.updatedAt), "MMM d, yyyy h:mm a")}.`}
+        title={t("title")}
+        description={t("description", {
+          date: formatDateTime(new Date(stats.updatedAt), locale as AppLocale),
+        })}
       >
         <DashboardRefreshButton />
         <PageHeaderAction
           href="/loans/new"
-          label="Add New Loan"
+          label={t("addNewLoan")}
           icon={Plus}
           className="shadow-sm shadow-primary/20"
         />
@@ -40,7 +48,7 @@ export default async function DashboardPage() {
       <KpiCards stats={stats} />
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Analytics</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{t("analytics")}</h2>
         <DashboardCharts
           trustDistribution={stats.trustDistribution}
           recoveryProgress={stats.recoveryProgress}
@@ -50,7 +58,7 @@ export default async function DashboardPage() {
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" asChild>
-          <Link href="/loans">View all loans</Link>
+          <Link href="/loans">{t("viewAllLoans")}</Link>
         </Button>
       </div>
     </div>
