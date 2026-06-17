@@ -343,18 +343,18 @@ Private project. All rights reserved.
 
 ## 👤 Author
 
-<div align="center">
+<div >
 
 **Mohamed Saouab**
 
 <br />
 
 <a href="https://github.com/msaouab" title="GitHub — msaouab">
-  <img src="https://cdn.simpleicons.org/github/181717" width="36" height="36" alt="GitHub" />
+  <img src="docs/images/github.svg" width="36" height="36" alt="GitHub" />
 </a>
 &nbsp;&nbsp;
 <a href="https://www.linkedin.com/in/msaouab" title="LinkedIn — Mohamed Saouab">
-  <img src="https://cdn.simpleicons.org/linkedin/0A66C2" width="36" height="36" alt="LinkedIn" />
+  <img src="docs/images/linkedin.svg" width="36" height="36" alt="LinkedIn" />
 </a>
 
 </div>
