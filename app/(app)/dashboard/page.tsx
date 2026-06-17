@@ -6,6 +6,7 @@ import { DashboardRefreshButton } from "@/components/dashboard/dashboard-refresh
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { getDashboardStats } from "@/lib/dashboard";
 import { formatDateTime } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
@@ -46,6 +47,8 @@ export default async function DashboardPage() {
       </PageHeader>
 
       <KpiCards stats={stats} />
+
+      <Separator />
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold tracking-tight">{t("analytics")}</h2>

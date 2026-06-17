@@ -8,6 +8,7 @@ import { DashboardCharts } from "@/components/dashboard/charts";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { getDashboardStats } from "@/lib/dashboard";
 import { formatDateTime } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
@@ -63,6 +64,8 @@ export default async function AdminUserProfilePage({
         <h2 className="text-lg font-semibold tracking-tight">{t("portfolioKpis")}</h2>
         <KpiCards stats={stats} />
       </section>
+
+      <Separator />
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold tracking-tight">{t("portfolioAnalytics")}</h2>

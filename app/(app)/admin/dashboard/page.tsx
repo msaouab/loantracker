@@ -58,6 +58,8 @@ export default async function AdminDashboardPage() {
         <KpiCards stats={portfolioStats} />
       </section>
 
+      <Separator />
+
       <section className="space-y-4">
         <h2 className="text-lg font-semibold tracking-tight">{t("portfolioAnalytics")}</h2>
         <DashboardCharts
