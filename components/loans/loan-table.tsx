@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -430,27 +431,26 @@ export function LoanTable({
 
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-6">
             <div className="flex items-center justify-center gap-2 sm:justify-start">
-              <label
-                htmlFor="loan-page-size"
+              <span
+                id="loan-page-size-label"
                 className="text-sm text-muted-foreground whitespace-nowrap"
               >
                 {t("rowsPerPage")}
-              </label>
-              <select
+              </span>
+              <DropdownSelect
                 id="loan-page-size"
-                value={pageSize}
-                onChange={(event) => {
-                  setPageSize(Number(event.target.value) as PageSize);
+                aria-label={t("rowsPerPage")}
+                value={String(pageSize)}
+                options={PAGE_SIZE_OPTIONS.map((size) => ({
+                  value: String(size),
+                  label: String(size),
+                }))}
+                onValueChange={(value) => {
+                  setPageSize(Number(value) as PageSize);
                   setPage(1);
                 }}
-                className="h-8 w-16 shrink-0 rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {PAGE_SIZE_OPTIONS.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
+                className="h-8 w-16"
+              />
             </div>
             <span className="text-sm text-muted-foreground">
               {t("pageOf", { page, totalPages })}

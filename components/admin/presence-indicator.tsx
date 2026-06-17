@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Tooltip,
@@ -30,19 +31,40 @@ function getPresenceLabel(
   return labels.offline;
 }
 
+function usePresenceLabel(lastSeenAt: string | null) {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("admin");
+
+  return getPresenceLabel(lastSeenAt, locale, {
+    online: t("online"),
+    offline: t("offline"),
+    lastSeen: (time: string) => t("lastSeen", { time }),
+  });
+}
+
+export function PresenceTooltip({
+  lastSeenAt,
+  children,
+}: {
+  lastSeenAt: string | null;
+  children: ReactNode;
+}) {
+  const label = usePresenceLabel(lastSeenAt);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent sideOffset={6}>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function PresenceIndicator({
   lastSeenAt,
 }: {
   lastSeenAt: string | null;
 }) {
-  const locale = useLocale() as AppLocale;
-  const t = useTranslations("admin");
-  const labels = {
-    online: t("online"),
-    offline: t("offline"),
-    lastSeen: (time: string) => t("lastSeen", { time }),
-  };
-  const label = getPresenceLabel(lastSeenAt, locale, labels);
+  const label = usePresenceLabel(lastSeenAt);
   const online = isOnline(lastSeenAt);
 
   return (

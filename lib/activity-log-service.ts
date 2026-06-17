@@ -13,6 +13,7 @@ import {
   isSecurityActivity,
   type ActivityTab,
 } from "@/lib/activity-log";
+import { getActivityDateWhere } from "@/lib/activity-query";
 import { formatCurrency } from "@/lib/loans";
 
 export type LogActivityInput = {
@@ -248,6 +249,11 @@ type ListActivitiesOptions = {
   category?: ActivityTab;
   /** When true, security events include the anonymized IP (admin audit views only). */
   includeIp?: boolean;
+  userIds?: string[];
+  search?: string;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  searchUserFields?: boolean;
 };
 
 function buildCategoryFilter(category?: ActivityTab) {
@@ -263,10 +269,56 @@ function buildCategoryFilter(category?: ActivityTab) {
   return { action: { in: actions } };
 }
 
+function buildActivityWhere(
+  filters: Pick<
+    ListActivitiesOptions,
+    "category" | "userIds" | "search" | "dateFrom" | "dateTo" | "searchUserFields"
+  >
+): Prisma.ActivityLogWhereInput {
+  const clauses: Prisma.ActivityLogWhereInput[] = [];
+
+  const categoryFilter = buildCategoryFilter(filters.category);
+  if (categoryFilter.action) {
+    clauses.push(categoryFilter);
+  }
+
+  if (filters.userIds?.length) {
+    clauses.push({ userId: { in: filters.userIds } });
+  }
+
+  const dateFilter = getActivityDateWhere(filters.dateFrom, filters.dateTo);
+  if (dateFilter) {
+    clauses.push(dateFilter);
+  }
+
+  const search = filters.search?.trim();
+  if (search) {
+    if (filters.searchUserFields) {
+      clauses.push({
+        OR: [
+          { summary: { contains: search, mode: "insensitive" } },
+          { user: { fullName: { contains: search, mode: "insensitive" } } },
+          { user: { email: { contains: search, mode: "insensitive" } } },
+        ],
+      });
+    } else {
+      clauses.push({ summary: { contains: search, mode: "insensitive" } });
+    }
+  }
+
+  return clauses.length ? { AND: clauses } : {};
+}
+
 export async function listActivitiesForUser(userId: string, options: ListActivitiesOptions) {
   const where = {
     userId,
-    ...buildCategoryFilter(options.category),
+    ...buildActivityWhere({
+      category: options.category,
+      search: options.search,
+      dateFrom: options.dateFrom,
+      dateTo: options.dateTo,
+      searchUserFields: false,
+    }),
   };
 
   const [items, total] = await Promise.all([
@@ -293,7 +345,14 @@ export async function listActivitiesForUser(userId: string, options: ListActivit
 }
 
 export async function listAllActivities(options: ListActivitiesOptions) {
-  const where = buildCategoryFilter(options.category);
+  const where = buildActivityWhere({
+    category: options.category,
+    userIds: options.userIds,
+    search: options.search,
+    dateFrom: options.dateFrom,
+    dateTo: options.dateTo,
+    searchUserFields: options.searchUserFields ?? true,
+  });
 
   const [items, total] = await Promise.all([
     prisma.activityLog.findMany({

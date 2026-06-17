@@ -3,15 +3,20 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, Plus, RefreshCw, ShieldBan, Snowflake } from "lucide-react";
+import { Check, Copy, Plus, RefreshCw, ShieldBan, Snowflake } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
 import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
-import { PresenceIndicator } from "@/components/admin/presence-indicator";
+import { PresenceIndicator, PresenceTooltip } from "@/components/admin/presence-indicator";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -27,6 +32,42 @@ import {
 } from "@/lib/admin-client";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
+
+function CopyEmailButton({ email }: { email: string }) {
+  const tc = useTranslations("common");
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(email);
+      setCopied(true);
+      notifySuccess(tc("emailCopied"));
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      notifyError(error, tc("emailCopyFailed"));
+    }
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="shrink-0 text-muted-foreground"
+          onClick={handleCopy}
+          aria-label={tc("copyEmail")}
+        >
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent sideOffset={6}>
+        {copied ? tc("emailCopied") : tc("copyEmail")}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 function StatusBadge({
   status,
@@ -207,7 +248,12 @@ export function UserTable() {
                             </Badge>
                           ) : null}
                         </TableCell>
-                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <div className="flex min-w-0 items-center gap-1">
+                            <span className="truncate">{user.email}</span>
+                            <CopyEmailButton email={user.email} />
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <StatusBadge status={user.status} labels={statusLabels} />
                         </TableCell>
@@ -215,9 +261,13 @@ export function UserTable() {
                           {formatDate(user.createdAt, locale)}
                         </TableCell>
                         <TableCell>
-                          {user.lastLoginAt
-                            ? formatDateTime(user.lastLoginAt, locale)
-                            : tc("never")}
+                          <PresenceTooltip lastSeenAt={user.lastSeenAt}>
+                            <span className="cursor-default">
+                              {user.lastLoginAt
+                                ? formatDateTime(user.lastLoginAt, locale)
+                                : tc("never")}
+                            </span>
+                          </PresenceTooltip>
                         </TableCell>
                         <TableCell>{user.loanCount}</TableCell>
                         <TableCell className="text-end">

@@ -51,7 +51,7 @@ describe("computeDashboardStats", () => {
       {
         purgedAmountRecovered: 3000,
         purgedRecoveredCount: 2,
-        purgedClientNames: ["Sara", "Omar"],
+        purgedClientKeys: ["Sara", "Omar"],
       }
     );
 
@@ -64,10 +64,20 @@ describe("computeDashboardStats", () => {
     const stats = computeDashboardStats(metrics(), [], ["Ali"], {
       purgedAmountRecovered: 1000,
       purgedRecoveredCount: 1,
-      purgedClientNames: ["Ali", "Sara"],
+      purgedClientKeys: ["Ali", "Sara"],
     });
 
     expect(stats.recoveredClients).toBe(2);
+  });
+
+  it("deduplicates org-wide recovered clients by manager and client name", () => {
+    const stats = computeDashboardStats(metrics(), [], ["u1|Ali", "u2|Ali"], {
+      purgedAmountRecovered: 0,
+      purgedRecoveredCount: 0,
+      purgedClientKeys: ["u1|Ali", "u3|Sara"],
+    });
+
+    expect(stats.recoveredClients).toBe(3);
   });
 
   it("returns zero recovery rate when there are no open loans", () => {

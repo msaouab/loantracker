@@ -8,6 +8,7 @@ export default async function AdminActivityPage() {
     <ActivityFeed
       admin
       orgWide
+      layout="table"
       title={t("activityTitle")}
       description={t("activityDescription")}
     />

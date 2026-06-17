@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoanPaymentHistory } from "@/components/loans/loan-payment-history";
 import { TrustBadge } from "@/components/loans/trust-badge";
@@ -49,23 +50,28 @@ export function LoanMobileSort({
 }) {
   const t = useTranslations("loans");
 
+  const sortOptions = useMemo(
+    () =>
+      LOAN_SORT_FIELDS.map((field) => ({
+        value: field,
+        label: t(SORT_KEYS[field]),
+      })),
+    [t]
+  );
+
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2">
-      <label htmlFor="loan-mobile-sort" className="shrink-0 text-sm text-muted-foreground">
+      <span className="shrink-0 text-sm text-muted-foreground">
         {t("sortLabel")}
-      </label>
-      <select
+      </span>
+      <DropdownSelect
         id="loan-mobile-sort"
+        aria-label={t("sortLabel")}
         value={sortBy}
-        onChange={(event) => onSort(event.target.value as LoanSortField)}
-        className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        {LOAN_SORT_FIELDS.map((field) => (
-          <option key={field} value={field}>
-            {t(SORT_KEYS[field])}
-          </option>
-        ))}
-      </select>
+        options={sortOptions}
+        onValueChange={(value) => onSort(value as LoanSortField)}
+        className="h-9 min-w-0 flex-1"
+      />
       <Button
         type="button"
         variant="outline"

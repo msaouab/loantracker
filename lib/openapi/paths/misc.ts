@@ -290,7 +290,31 @@ export const adminPaths: OpenAPIV3.PathsObject = {
       summary: "List activity across all users",
       operationId: "listAdminActivity",
       security: adminSecurity,
-      parameters: activityQuery,
+      parameters: [
+        ...activityQuery,
+        {
+          name: "search",
+          in: "query",
+          schema: { type: "string" },
+          description: "Search summary, user name, or email",
+        },
+        {
+          name: "dateFrom",
+          in: "query",
+          schema: { type: "string", format: "date" },
+        },
+        {
+          name: "dateTo",
+          in: "query",
+          schema: { type: "string", format: "date" },
+        },
+        {
+          name: "userId",
+          in: "query",
+          schema: { type: "string", format: "uuid" },
+          description: "Filter by actor user id (repeat for multiple users)",
+        },
+      ],
       responses: {
         "200": okResponse(ref("ActivityList")),
         "401": errorResponses.Unauthorized,

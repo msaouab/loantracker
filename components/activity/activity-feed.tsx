@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   CircleUser,
@@ -39,7 +39,21 @@ import {
   type ActivityTab,
 } from "@/lib/activity-log";
 import { fetchActivities, type ActivityItem } from "@/lib/activity-client";
+import { fetchAdminUsers, type AdminUser } from "@/lib/admin-client";
 import { ActivityEmptyState } from "@/components/activity/activity-empty-state";
+import {
+  ActivityFilters,
+  type ActivityFilterValues,
+} from "@/components/activity/activity-filters";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
@@ -84,6 +98,27 @@ function ActivityActionIcon({
   }
 }
 
+function getActivityDisplay(
+  item: ActivityItem,
+  locale: AppLocale,
+  t: ReturnType<typeof useTranslations<"activity">>
+) {
+  const deviceLabels = {
+    desktop: t("deviceDesktop"),
+    mobile: t("deviceMobile"),
+    tablet: t("deviceTablet"),
+  };
+  const clientInfo = formatActivityClientInfo(item, locale, deviceLabels);
+  const summary = formatActivitySummary(item, locale, t);
+
+  return {
+    actionLabel: t(getActivityActionKey(item.action)),
+    details: isSecurityActivity(item.action) ? clientInfo : summary,
+    loanHref:
+      item.entityType === "loan" && item.entityId ? `/loans/${item.entityId}` : null,
+  };
+}
+
 function ActivityRow({
   item,
   showActor,
@@ -93,16 +128,7 @@ function ActivityRow({
 }) {
   const locale = useLocale() as AppLocale;
   const t = useTranslations("activity");
-  const loanHref =
-    item.entityType === "loan" && item.entityId ? `/loans/${item.entityId}` : null;
-
-  const deviceLabels = {
-    desktop: t("deviceDesktop"),
-    mobile: t("deviceMobile"),
-    tablet: t("deviceTablet"),
-  };
-  const clientInfo = formatActivityClientInfo(item, locale, deviceLabels);
-  const summary = formatActivitySummary(item, locale, t);
+  const { actionLabel, details, loanHref } = getActivityDisplay(item, locale, t);
 
   return (
     <div className="flex gap-3 px-4 py-3 sm:px-5">
@@ -112,15 +138,13 @@ function ActivityRow({
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t(getActivityActionKey(item.action))}
+            {actionLabel}
           </span>
           <span className="text-xs text-muted-foreground">
             {formatDateTime(item.createdAt, locale, "MMM d, yyyy · h:mm a")}
           </span>
         </div>
-        <p className="text-sm leading-snug">
-          {isSecurityActivity(item.action) ? clientInfo : summary}
-        </p>
+        <p className="text-sm leading-snug">{details}</p>
         {showActor && item.actorName ? (
           <p className="text-xs text-muted-foreground">
             {t("byActor", { actorName: item.actorName })}
@@ -136,6 +160,48 @@ function ActivityRow({
   );
 }
 
+function ActivityTableRow({
+  item,
+  showActor,
+}: {
+  item: ActivityItem;
+  showActor: boolean;
+}) {
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("activity");
+  const { actionLabel, details, loanHref } = getActivityDisplay(item, locale, t);
+
+  return (
+    <TableRow>
+      <TableCell className="w-12 p-2">
+        <span
+          className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+          aria-label={actionLabel}
+        >
+          <ActivityActionIcon action={item.action} className="h-4 w-4" />
+        </span>
+      </TableCell>
+      <TableCell className="whitespace-nowrap text-muted-foreground">
+        {formatDateTime(item.createdAt, locale, "MMM d, yyyy · h:mm a")}
+      </TableCell>
+      <TableCell className="font-medium">{actionLabel}</TableCell>
+      <TableCell className="max-w-md">
+        <p className="text-sm leading-snug">{details}</p>
+        {loanHref ? (
+          <Link href={loanHref} className="text-xs font-medium text-primary hover:underline">
+            {t("viewLoan")}
+          </Link>
+        ) : null}
+      </TableCell>
+      {showActor ? (
+        <TableCell className="whitespace-nowrap">
+          {item.actorName ?? "—"}
+        </TableCell>
+      ) : null}
+    </TableRow>
+  );
+}
+
 type ActivityFeedProps = {
   /** Admin role → admin-scoped tabs (no loans/payments, adds users). */
   admin?: boolean;
@@ -144,6 +210,7 @@ type ActivityFeedProps = {
   /** Admin view of a specific user's activity (manager-style tabs + location copy). */
   userId?: string;
   embedded?: boolean;
+  layout?: "list" | "table";
   title?: string;
   description?: string;
 };
@@ -153,6 +220,7 @@ export function ActivityFeed({
   orgWide = false,
   userId,
   embedded = false,
+  layout = "list",
   title,
   description,
 }: ActivityFeedProps) {
@@ -165,11 +233,56 @@ export function ActivityFeed({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<ActivityFilterValues>({
+    search: "",
+    dateFrom: "",
+    dateTo: "",
+    actorUserIds: [],
+  });
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [managers, setManagers] = useState<AdminUser[]>([]);
 
   const displayTitle = title ?? t("title");
   const displayDescription = description ?? t("description");
 
   const categoryFilter = activeTab;
+  const showActor = orgWide;
+  const showAdminFilters = orgWide && !userId && layout === "table";
+  const tableColumnCount = showActor ? 5 : 4;
+  const hasActiveFilters = Boolean(
+    filters.search ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      filters.actorUserIds.length > 0
+  );
+
+  const fetchParams = useMemo(
+    () => ({
+      page,
+      pageSize: 20,
+      admin: orgWide,
+      userId,
+      category: categoryFilter,
+      search: debouncedSearch || undefined,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      actorUserIds:
+        showAdminFilters && filters.actorUserIds.length > 0
+          ? filters.actorUserIds
+          : undefined,
+    }),
+    [
+      page,
+      orgWide,
+      userId,
+      categoryFilter,
+      debouncedSearch,
+      filters.dateFrom,
+      filters.dateTo,
+      filters.actorUserIds,
+      showAdminFilters,
+    ]
+  );
 
   const applyActivityData = useCallback((data: Awaited<ReturnType<typeof fetchActivities>>) => {
     setActivities(data.activities);
@@ -181,31 +294,49 @@ export function ActivityFeed({
     setLoading(true);
 
     try {
-      const data = await fetchActivities({
-        page,
-        pageSize: 20,
-        admin: orgWide,
-        userId,
-        category: categoryFilter,
-      });
+      const data = await fetchActivities(fetchParams);
       applyActivityData(data);
     } catch (err) {
       notifyError(err, t("failedLoad"));
     } finally {
       setLoading(false);
     }
-  }, [orgWide, userId, applyActivityData, categoryFilter, page, t]);
+  }, [fetchParams, applyActivityData, t]);
+
+  useEffect(() => {
+    if (!showAdminFilters) {
+      return;
+    }
+
+    let cancelled = false;
+
+    fetchAdminUsers()
+      .then((users) => {
+        if (!cancelled) {
+          setManagers(users);
+        }
+      })
+      .catch(() => {
+        // User filter stays on "All users" if the list fails to load.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showAdminFilters]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(filters.search.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [filters.search]);
 
   useEffect(() => {
     let cancelled = false;
 
-    void fetchActivities({
-      page,
-      pageSize: 20,
-      admin: orgWide,
-      userId,
-      category: categoryFilter,
-    })
+    void fetchActivities(fetchParams)
       .then((data) => {
         if (cancelled) return;
         applyActivityData(data);
@@ -221,7 +352,7 @@ export function ActivityFeed({
     return () => {
       cancelled = true;
     };
-  }, [orgWide, userId, applyActivityData, categoryFilter, page, t]);
+  }, [fetchParams, applyActivityData, t]);
 
   function goToPage(nextPage: number) {
     setLoading(true);
@@ -236,6 +367,43 @@ export function ActivityFeed({
     setActiveTab(tab);
     setPage(1);
   }
+
+  function sameUserIds(a: string[], b: string[]) {
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((id, index) => id === sortedB[index]);
+  }
+
+  function handleFiltersChange(next: ActivityFilterValues) {
+    const searchOnly =
+      next.search !== filters.search &&
+      next.dateFrom === filters.dateFrom &&
+      next.dateTo === filters.dateTo &&
+      sameUserIds(next.actorUserIds, filters.actorUserIds);
+
+    setFilters(next);
+    setPage(1);
+
+    if (!searchOnly) {
+      setLoading(true);
+    }
+  }
+
+  const adminFiltersBar = showAdminFilters ? (
+    <ActivityFilters
+      values={filters}
+      users={managers}
+      onChange={handleFiltersChange}
+    />
+  ) : null;
+
+  const eventsCountLabel = `${t("eventsCount", { count: total })}${
+    hasActiveFilters ? t("matchingFilters") : ""
+  }`;
 
   const tabBar = (
     <div className="overflow-x-auto px-4 py-3 sm:px-5">
@@ -268,7 +436,87 @@ export function ActivityFeed({
     </div>
   );
 
-  const listContent = (
+  const listContent =
+    layout === "table" ? (
+      <>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12" />
+              <TableHead>{t("columnWhen")}</TableHead>
+              <TableHead>{t("columnAction")}</TableHead>
+              <TableHead>{t("columnDetails")}</TableHead>
+              {showActor ? <TableHead>{t("columnUser")}</TableHead> : null}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading && activities.length === 0
+              ? Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    {Array.from({ length: tableColumnCount }).map((__, cellIndex) => (
+                      <TableCell key={cellIndex} className={cellIndex === 0 ? "w-12 p-2" : undefined}>
+                        <Skeleton
+                          className={cn(
+                            "h-5 w-full max-w-32",
+                            cellIndex === 0 && "h-8 w-8 max-w-none rounded-lg"
+                          )}
+                        />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              : null}
+
+            {!loading && activities.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={tableColumnCount} className="h-32 p-0">
+                  <ActivityEmptyState admin={admin} tab={activeTab} />
+                </TableCell>
+              </TableRow>
+            ) : null}
+
+            {!loading
+              ? activities.map((item) => (
+                  <ActivityTableRow
+                    key={item.id}
+                    item={item}
+                    showActor={showActor}
+                  />
+                ))
+              : null}
+          </TableBody>
+        </Table>
+
+        {totalPages > 1 ? (
+          <>
+            <Separator />
+            <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
+              <p className="text-sm text-muted-foreground">
+                {t("pageOf", { page, totalPages })}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || loading}
+                  onClick={() => goToPage(Math.max(1, page - 1))}
+                >
+                  {tc("previous")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => goToPage(page + 1)}
+                >
+                  {tc("next")}
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : null}
+      </>
+    ) : (
     <>
       {loading && activities.length === 0 ? (
         <div className="space-y-0 divide-y divide-border/60">
@@ -287,7 +535,7 @@ export function ActivityFeed({
       ) : (
         <div className="divide-y divide-border/60">
           {activities.map((item) => (
-            <ActivityRow key={item.id} item={item} showActor={orgWide} />
+            <ActivityRow key={item.id} item={item} showActor={showActor} />
           ))}
         </div>
       )}
@@ -321,7 +569,7 @@ export function ActivityFeed({
         </>
       ) : null}
     </>
-  );
+    );
 
   if (embedded) {
     return (
@@ -349,11 +597,15 @@ export function ActivityFeed({
         <CardContent className="p-0">
           <Separator />
           {tabBar}
+          {showAdminFilters ? (
+            <>
+              <Separator />
+              {adminFiltersBar}
+            </>
+          ) : null}
           <Separator />
           <div className="flex items-center justify-between px-4 py-3 sm:px-5">
-            <p className="text-sm text-muted-foreground">
-              {t("eventsCount", { count: total })}
-            </p>
+            <p className="text-sm text-muted-foreground">{eventsCountLabel}</p>
           </div>
           <Separator />
           {listContent}
@@ -384,11 +636,15 @@ export function ActivityFeed({
         </div>
         <Separator />
         {tabBar}
+        {showAdminFilters ? (
+          <>
+            <Separator />
+            {adminFiltersBar}
+          </>
+        ) : null}
         <Separator />
         <div className="flex items-center justify-between px-4 py-3 sm:px-5">
-          <p className="text-sm text-muted-foreground">
-            {t("eventsCount", { count: total })}
-          </p>
+          <p className="text-sm text-muted-foreground">{eventsCountLabel}</p>
         </div>
         <Separator />
         {listContent}

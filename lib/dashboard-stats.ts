@@ -44,31 +44,38 @@ export type TopClientInput = {
 export type RecoveredSnapshotInput = {
   purgedAmountRecovered: number;
   purgedRecoveredCount: number;
-  purgedClientNames: string[];
+  purgedClientKeys: string[];
 };
 
 function toNumber(value: bigint) {
   return Number(value);
 }
 
+function countRecoveredClients(
+  liveKeys: string[],
+  purgedKeys: string[]
+) {
+  return new Set([...liveKeys, ...purgedKeys]).size;
+}
+
 export function computeDashboardStats(
   metrics: LoanMetricsInput,
   topClients: TopClientInput[],
-  recoveredClientNames: string[],
+  recoveredClientKeys: string[],
   snapshot: RecoveredSnapshotInput = {
     purgedAmountRecovered: 0,
     purgedRecoveredCount: 0,
-    purgedClientNames: [],
+    purgedClientKeys: [],
   },
   extras: Pick<DashboardStats, "isAdminView" | "activeUserCount"> = {}
 ): DashboardStats {
   const totalLoanAmount = toNumber(metrics.full_budget);
   const amountRecovered = toNumber(metrics.open_amount_paid);
   const outstanding = toNumber(metrics.outstanding);
-  const recoveredClients = new Set([
-    ...recoveredClientNames,
-    ...snapshot.purgedClientNames,
-  ]).size;
+  const recoveredClients = countRecoveredClients(
+    recoveredClientKeys,
+    snapshot.purgedClientKeys
+  );
   const recoveredAmount =
     toNumber(metrics.recovered_amount) + snapshot.purgedAmountRecovered;
   const recoveredLoanCount =

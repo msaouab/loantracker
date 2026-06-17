@@ -34,13 +34,27 @@ export async function fetchActivities(params: {
   pageSize?: number;
   category?: ActivityTab;
   admin?: boolean;
+  /** Route to a specific user's activity feed (admin user profile). */
   userId?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  /** Org-wide admin feed: filter by one or more actor user ids. */
+  actorUserIds?: string[];
 }) {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set("page", String(params.page));
   if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
   if (params.category && params.category !== "all") {
     searchParams.set("category", params.category);
+  }
+  if (params.search) searchParams.set("search", params.search);
+  if (params.dateFrom) searchParams.set("dateFrom", params.dateFrom);
+  if (params.dateTo) searchParams.set("dateTo", params.dateTo);
+  if (params.actorUserIds?.length) {
+    for (const actorUserId of params.actorUserIds) {
+      searchParams.append("userId", actorUserId);
+    }
   }
 
   const base = params.userId
