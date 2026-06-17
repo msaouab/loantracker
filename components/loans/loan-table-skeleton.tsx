@@ -125,7 +125,7 @@ export function LoanTableShell({
         { field: "totalAmount" as const, label: t("sortTotal") },
         { field: "amountPaid" as const, label: t("sortPaid") },
         { field: "outstanding" as const, label: t("sortOutstanding") },
-        { field: "loanDate" as const, label: t("sortDate") },
+        { field: "loanDate" as const, label: t("sortDate"), className: "min-w-32" },
         { field: "clientTrust" as const, label: t("sortTrust") },
       ] satisfies { field: LoanSortField; label: string; className?: string }[],
     [t]
@@ -149,6 +149,7 @@ export function LoanTableShell({
                   sortBy={sortBy}
                   sortOrder={sortOrder}
                   onSort={onSort}
+                  className={column.className}
                 />
               ))}
               {showRecoveredAt ? (

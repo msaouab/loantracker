@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
 import { useLocale, useTranslations } from "next-intl";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import {
   isDayBeforeMin,
   parseDateParam,
 } from "@/lib/dates";
-import { getDateFnsLocale } from "@/lib/format";
+import { formatDate, getDateFnsLocale } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
@@ -85,20 +84,18 @@ function PickerLabel({
   mounted,
   selected,
   placeholder,
-  formatPattern,
   locale,
 }: {
   mounted: boolean;
   selected?: Date;
   placeholder: string;
-  formatPattern: string;
   locale: AppLocale;
 }) {
   if (!selected || !mounted) {
     return placeholder;
   }
 
-  return format(selected, formatPattern, { locale: getDateFnsLocale(locale) });
+  return formatDate(selected, locale);
 }
 
 export function DatePicker({
@@ -135,7 +132,6 @@ export function DatePicker({
               mounted={mounted}
               selected={selected}
               placeholder={resolvedPlaceholder}
-              formatPattern="MMM d, yyyy"
               locale={locale}
             />
           </span>

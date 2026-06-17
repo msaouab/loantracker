@@ -43,6 +43,7 @@ function recoveredCutoff() {
 }
 
 import { computeRecoveredAt } from "@/lib/loan-recovery";
+import { INITIAL_PAYMENT_NOTE } from "@/lib/payment-display";
 
 export { computeRecoveredAt };
 
@@ -118,7 +119,7 @@ export async function createLoan(userId: string, input: CreateLoanInput) {
           loanId: loan.id,
           amount: input.amountPaid,
           paidAt: loan.loanDate,
-          note: "Initial balance",
+          note: INITIAL_PAYMENT_NOTE,
         },
       });
       const amountPaid = await syncAmountPaid(tx, loan.id);

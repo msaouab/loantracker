@@ -297,6 +297,7 @@
     "failedDeletePayment": "فشل حذف الدفعة",
     "editPaymentAria": "تعديل دفعة {amount}",
     "deletePaymentAria": "حذف دفعة {amount}",
+    "initialBalanceNote": "الرصيد الابتدائي",
     "sortClient": "العميل",
     "sortTotal": "الإجمالي",
     "sortPaid": "المدفوع",

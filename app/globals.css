@@ -139,6 +139,9 @@
   html {
     @apply font-sans scroll-smooth;
   }
+  html[lang="ar"] {
+    font-family: var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+  }
   h1,
   h2,
   h3,

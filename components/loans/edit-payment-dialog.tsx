@@ -22,6 +22,10 @@ import { dateParamToIso, formatDateParam } from "@/lib/dates";
 import { formatCurrency } from "@/lib/loans";
 import type { AppLocale } from "@/lib/locale";
 import {
+  INITIAL_PAYMENT_NOTE,
+  isInitialPaymentNote,
+} from "@/lib/payment-display";
+import {
   updateLoanPayment,
   type LoanPayment,
 } from "@/lib/loan-payments-client";
@@ -40,7 +44,7 @@ function paymentFormState(payment: LoanPayment) {
   return {
     amount: String(payment.amount),
     paidAt: formatDateParam(new Date(payment.paidAt)),
-    note: payment.note ?? "",
+    note: isInitialPaymentNote(payment.note) ? "" : (payment.note ?? ""),
   };
 }
 
@@ -75,7 +79,9 @@ export function EditPaymentDialog({
       await updateLoanPayment(loanId, payment.id, {
         amount: parsedAmount,
         paidAt: dateParamToIso(paidAt),
-        note: note.trim() || undefined,
+        note:
+          note.trim() ||
+          (isInitialPaymentNote(payment.note) ? INITIAL_PAYMENT_NOTE : undefined),
       });
       onOpenChange(false);
       onUpdated?.();

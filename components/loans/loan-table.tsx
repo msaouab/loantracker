@@ -349,7 +349,9 @@ export function LoanTable({
                       <TableCell className="font-medium text-destructive tabular-nums">
                         {formatCurrency(loan.outstanding, locale)}
                       </TableCell>
-                      <TableCell>{formatDate(loan.loanDate, locale)}</TableCell>
+                      <TableCell className="min-w-32 whitespace-normal">
+                        {formatDate(loan.loanDate, locale)}
+                      </TableCell>
                       <TableCell>
                         <TrustBadge trusted={loan.clientTrust} />
                       </TableCell>

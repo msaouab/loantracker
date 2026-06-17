@@ -297,6 +297,7 @@
     "failedDeletePayment": "Échec de la suppression du paiement",
     "editPaymentAria": "Modifier le paiement de {amount}",
     "deletePaymentAria": "Supprimer le paiement de {amount}",
+    "initialBalanceNote": "Solde initial",
     "sortClient": "Client",
     "sortTotal": "Total",
     "sortPaid": "Payé",

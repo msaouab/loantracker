@@ -8,6 +8,14 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { DeletePaymentDialog } from "@/components/loans/delete-payment-dialog";
 import { EditPaymentDialog } from "@/components/loans/edit-payment-dialog";
@@ -15,6 +23,7 @@ import { dateParamToIso, todayDateParam } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
 import { formatCurrency } from "@/lib/loans";
 import type { AppLocale } from "@/lib/locale";
+import { formatPaymentNote } from "@/lib/payment-display";
 import {
   createLoanPayment,
   fetchLoanPayments,
@@ -278,61 +287,65 @@ export function LoanPaymentHistory({
           ) : null}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border/60">
-          <table className="w-full min-w-[480px] text-sm">
-            <thead>
-              <tr className="border-b border-border/60 bg-muted/30 text-start text-muted-foreground">
-                <th className="px-3 py-2 font-medium">{tc("date")}</th>
-                <th className="px-3 py-2 font-medium">{tc("amount")}</th>
-                <th className="px-3 py-2 font-medium">{tc("note")}</th>
-                <th className="px-3 py-2 text-end font-medium">{tc("actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((payment) => (
-                <tr
-                  key={payment.id}
-                  className="border-b border-border/40 last:border-0"
-                >
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    {formatDate(payment.paidAt, locale)}
-                  </td>
-                  <td className="px-3 py-2.5 font-medium text-success tabular-nums">
-                    {formatCurrency(payment.amount, locale)}
-                  </td>
-                  <td className="px-3 py-2.5 text-muted-foreground">
-                    {payment.note || "—"}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setPaymentToEdit(payment)}
-                        aria-label={t("editPaymentAria", {
-                          amount: formatCurrency(payment.amount, locale),
-                        })}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setPaymentToDelete(payment)}
-                        aria-label={t("deletePaymentAria", {
-                          amount: formatCurrency(payment.amount, locale),
-                        })}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="surface-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{tc("date")}</TableHead>
+                <TableHead>{tc("amount")}</TableHead>
+                <TableHead>{tc("note")}</TableHead>
+                <TableHead className="text-end">{tc("actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payments.map((payment) => {
+                const noteLabel = formatPaymentNote(
+                  payment.note,
+                  t("initialBalanceNote")
+                );
+
+                return (
+                  <TableRow key={payment.id}>
+                    <TableCell className="min-w-32 whitespace-normal">
+                      {formatDate(payment.paidAt, locale)}
+                    </TableCell>
+                    <TableCell className="font-medium text-success tabular-nums">
+                      {formatCurrency(payment.amount, locale)}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate text-muted-foreground">
+                      {noteLabel ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setPaymentToEdit(payment)}
+                          aria-label={t("editPaymentAria", {
+                            amount: formatCurrency(payment.amount, locale),
+                          })}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setPaymentToDelete(payment)}
+                          aria-label={t("deletePaymentAria", {
+                            amount: formatCurrency(payment.amount, locale),
+                          })}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
 
