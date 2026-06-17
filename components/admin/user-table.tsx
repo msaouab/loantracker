@@ -234,7 +234,7 @@ export function UserTable() {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
                           <span className="inline-flex items-center gap-2">
-                            <PresenceIndicator lastSeenAt={user.lastSeenAt} />
+                            <PresenceIndicator lastSeenAt={user.lastSeenAt} showTooltip={false} />
                             <Link
                               href={`/admin/users/${user.id}`}
                               className="hover:text-primary hover:underline"

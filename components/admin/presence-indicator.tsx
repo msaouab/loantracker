@@ -61,11 +61,31 @@ export function PresenceTooltip({
 
 export function PresenceIndicator({
   lastSeenAt,
+  showTooltip = true,
 }: {
   lastSeenAt: string | null;
+  showTooltip?: boolean;
 }) {
   const label = usePresenceLabel(lastSeenAt);
   const online = isOnline(lastSeenAt);
+
+  const dot = (
+    <span
+      className={`size-2 rounded-full ${online ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+    />
+  );
+
+  if (!showTooltip) {
+    return (
+      <span
+        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full"
+        role="img"
+        aria-label={label}
+      >
+        {dot}
+      </span>
+    );
+  }
 
   return (
     <Tooltip>
@@ -76,9 +96,7 @@ export function PresenceIndicator({
           role="img"
           aria-label={label}
         >
-          <span
-            className={`size-2 rounded-full ${online ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
-          />
+          {dot}
         </span>
       </TooltipTrigger>
       <TooltipContent sideOffset={6}>{label}</TooltipContent>
