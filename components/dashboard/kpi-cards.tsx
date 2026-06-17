@@ -1,16 +1,20 @@
 "use client";
 
 import {
+  BadgeCheck,
   CircleDollarSign,
+  HandCoins,
   Target,
   TrendingUp,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { DashboardStats } from "@/lib/dashboard";
 import { formatCurrency } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 type KpiStats = Pick<
   DashboardStats,
@@ -20,10 +24,25 @@ type KpiStats = Pick<
   | "outstanding"
   | "recoveryRate"
   | "activeCount"
+  | "recoveredClients"
+  | "recoveredAmount"
+  | "recoveredLoanCount"
   | "isAdminView"
 >;
 
-const cardStyles = [
+type KpiCard = {
+  title: string;
+  value: string;
+  description: string;
+};
+
+type KpiCardStyle = {
+  icon: LucideIcon;
+  accent: string;
+  iconBg: string;
+};
+
+const openCardStyles: KpiCardStyle[] = [
   {
     icon: Users,
     accent: "from-blue-500/15 to-blue-500/5",
@@ -46,48 +65,32 @@ const cardStyles = [
   },
 ];
 
-export function KpiCards({ stats }: { stats: KpiStats }) {
-  const t = useTranslations("dashboard");
-  const locale = useLocale() as AppLocale;
+const recoveredCardStyles: KpiCardStyle[] = [
+  {
+    icon: BadgeCheck,
+    accent: "from-teal-500/15 to-teal-500/5",
+    iconBg: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+  },
+  {
+    icon: HandCoins,
+    accent: "from-rose-500/15 to-rose-500/5",
+    iconBg: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+  },
+];
 
-  const activeLoansLabel = stats.isAdminView
-    ? t("activeLoansOrgWide", { count: stats.activeCount })
-    : t("activeLoans", { count: stats.activeCount });
-
-  const cards = [
-    {
-      title: t("clients"),
-      value: stats.totalClients.toString(),
-      description: stats.isAdminView
-        ? t("clientsDescriptionAdmin")
-        : t("clientsDescription"),
-    },
-    {
-      title: t("toCollect"),
-      value: formatCurrency(stats.outstanding, locale),
-      description: t("toCollectDescription", { activeLoans: activeLoansLabel }),
-    },
-    {
-      title: t("collected"),
-      value: formatCurrency(stats.amountRecovered, locale),
-      description: t("collectedDescription", {
-        rate: stats.recoveryRate.toFixed(1),
-      }),
-    },
-    {
-      title: t("fullBudget"),
-      value: formatCurrency(stats.totalLoanAmount, locale),
-      description: t("fullBudgetDescription", {
-        collected: formatCurrency(stats.amountRecovered, locale),
-        outstanding: formatCurrency(stats.outstanding, locale),
-      }),
-    },
-  ];
-
+function KpiCardGrid({
+  cards,
+  styles,
+  className,
+}: {
+  cards: KpiCard[];
+  styles: KpiCardStyle[];
+  className?: string;
+}) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className={cn("grid gap-4 sm:grid-cols-2", className)}>
       {cards.map((card, index) => {
-        const style = cardStyles[index];
+        const style = styles[index];
         const Icon = style.icon;
 
         return (
@@ -121,6 +124,84 @@ export function KpiCards({ stats }: { stats: KpiStats }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+export function KpiCards({ stats }: { stats: KpiStats }) {
+  const t = useTranslations("dashboard");
+  const locale = useLocale() as AppLocale;
+
+  const activeLoansLabel = stats.isAdminView
+    ? t("activeLoansOrgWide", { count: stats.activeCount })
+    : t("activeLoans", { count: stats.activeCount });
+
+  const recoveredLoansLabel = stats.isAdminView
+    ? t("recoveredLoansOrgWide", { count: stats.recoveredLoanCount })
+    : t("recoveredLoans", { count: stats.recoveredLoanCount });
+
+  const openCards: KpiCard[] = [
+    {
+      title: t("clients"),
+      value: stats.totalClients.toString(),
+      description: stats.isAdminView
+        ? t("clientsDescriptionAdmin")
+        : t("clientsDescription"),
+    },
+    {
+      title: t("toCollect"),
+      value: formatCurrency(stats.outstanding, locale),
+      description: t("toCollectDescription", { activeLoans: activeLoansLabel }),
+    },
+    {
+      title: t("collected"),
+      value: formatCurrency(stats.amountRecovered, locale),
+      description: t("collectedDescription", {
+        rate: stats.recoveryRate.toFixed(1),
+      }),
+    },
+    {
+      title: t("fullBudget"),
+      value: formatCurrency(stats.totalLoanAmount, locale),
+      description: t("fullBudgetDescription", {
+        collected: formatCurrency(stats.amountRecovered, locale),
+        outstanding: formatCurrency(stats.outstanding, locale),
+      }),
+    },
+  ];
+
+  const recoveredCards: KpiCard[] = [
+    {
+      title: t("recoveredClients"),
+      value: stats.recoveredClients.toString(),
+      description: t("recoveredClientsDescription", {
+        recoveredLoans: recoveredLoansLabel,
+      }),
+    },
+    {
+      title: t("recoveredAmount"),
+      value: formatCurrency(stats.recoveredAmount, locale),
+      description: t("recoveredAmountDescription"),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">
+          {t("openLoansSection")}
+        </h2>
+        <KpiCardGrid cards={openCards} styles={openCardStyles} className="xl:grid-cols-4" />
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">
+          {t("recoveredLoansSection")}
+        </h2>
+        <KpiCardGrid cards={recoveredCards} styles={recoveredCardStyles} className="xl:grid-cols-2" />
+      </section>
     </div>
   );
 }

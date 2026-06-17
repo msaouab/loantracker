@@ -61,16 +61,28 @@ export function LoanForm({
   const tc = useTranslations("common");
   const locale = useLocale() as AppLocale;
   const [values, setValues] = useState(() => createInitialValues(initialValues));
+  const [amountPaidInput, setAmountPaidInput] = useState(() => {
+    const paid = createInitialValues(initialValues).amountPaid;
+    return paid > 0 ? String(paid) : "";
+  });
   const [loading, setLoading] = useState(false);
 
-  const outstanding = getOutstanding(values.totalAmount, values.amountPaid);
+  const parsedAmountPaid =
+    amountPaidInput.trim() === ""
+      ? 0
+      : Math.max(0, Math.round(Number(amountPaidInput) || 0));
+
+  const outstanding = getOutstanding(values.totalAmount, parsedAmountPaid);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
 
     try {
-      await onSubmit(values);
+      await onSubmit({
+        ...values,
+        amountPaid: parsedAmountPaid,
+      });
     } catch (submitError) {
       notifyError(submitError, t("failedSave"));
       setLoading(false);
@@ -130,14 +142,19 @@ export function LoanForm({
               type="number"
               min="0"
               step="1"
-              value={values.amountPaid || ""}
-              onChange={(event) =>
+              value={amountPaidInput}
+              onChange={(event) => {
+                const next = event.target.value;
+                setAmountPaidInput(next);
                 setValues((current) => ({
                   ...current,
-                  amountPaid: Math.max(0, Math.round(Number(event.target.value) || 0)),
-                }))
-              }
-              required
+                  amountPaid:
+                    next.trim() === ""
+                      ? 0
+                      : Math.max(0, Math.round(Number(next) || 0)),
+                }));
+              }}
+              placeholder="0"
             />
           )}
         </div>
@@ -174,21 +191,25 @@ export function LoanForm({
           />
         </div>
 
-        <div className="flex items-center justify-between rounded-lg border p-4 sm:col-span-2">
-          <div>
-            <Label htmlFor="clientTrust">{t("clientTrust")}</Label>
+        <label
+          htmlFor="clientTrust"
+          className="flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/30 sm:col-span-2"
+        >
+          <div className="min-w-0 flex-1">
+            <span className="text-sm font-medium">{t("clientTrust")}</span>
             <p className="text-sm text-muted-foreground">
               {t("clientTrustQuestion")}
             </p>
           </div>
           <Switch
             id="clientTrust"
+            className="shrink-0"
             checked={values.clientTrust}
             onCheckedChange={(checked) =>
               setValues((current) => ({ ...current, clientTrust: checked }))
             }
           />
-        </div>
+        </label>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">

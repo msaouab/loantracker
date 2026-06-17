@@ -11,6 +11,7 @@ export type ValidationMessages = {
   totalAmountPositive: string;
   amountPaidInt: string;
   amountPaidNegative: string;
+  amountPaidExceedsTotal: string;
   paymentAmountInt: string;
   paymentAmountPositive: string;
   currentPasswordRequired: string;
@@ -31,6 +32,7 @@ export async function getValidationMessages(): Promise<ValidationMessages> {
     totalAmountPositive: t("totalAmountPositive"),
     amountPaidInt: t("amountPaidInt"),
     amountPaidNegative: t("amountPaidNegative"),
+    amountPaidExceedsTotal: t("amountPaidExceedsTotal"),
     paymentAmountInt: t("paymentAmountInt"),
     paymentAmountPositive: t("paymentAmountPositive"),
     currentPasswordRequired: t("currentPasswordRequired"),

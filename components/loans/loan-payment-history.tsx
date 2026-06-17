@@ -40,6 +40,7 @@ export function LoanPaymentHistory({
   const locale = useLocale() as AppLocale;
   const t = useTranslations("loans");
   const tc = useTranslations("common");
+  const tv = useTranslations("validation");
   const hasInitialData = initialPayments !== undefined;
 
   const [payments, setPayments] = useState<LoanPayment[]>(
@@ -108,6 +109,16 @@ export function LoanPaymentHistory({
       return;
     }
 
+    if (amount > outstanding) {
+      notifyError(
+        null,
+        tv("paymentExceedsOutstanding", {
+          amount: formatCurrency(outstanding, locale),
+        })
+      );
+      return;
+    }
+
     setAdding(true);
 
     try {
@@ -134,6 +145,13 @@ export function LoanPaymentHistory({
     loadPayments();
     onPaymentsChanged?.();
   }
+
+  const parsedAddAmount =
+    addAmount.trim() === "" ? null : Math.round(Number(addAmount));
+  const addAmountExceedsMax =
+    parsedAddAmount !== null &&
+    !Number.isNaN(parsedAddAmount) &&
+    parsedAddAmount > outstanding;
 
   if (loading) {
     return (
@@ -201,8 +219,16 @@ export function LoanPaymentHistory({
               placeholder={t("maxAmount", {
                 amount: formatCurrency(outstanding, locale),
               })}
+              aria-invalid={addAmountExceedsMax}
               required
             />
+            {addAmountExceedsMax ? (
+              <p className="text-sm text-destructive" role="alert">
+                {tv("paymentExceedsOutstanding", {
+                  amount: formatCurrency(outstanding, locale),
+                })}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`payment-date-${loanId}`}>{t("paymentDate")}</Label>
@@ -222,7 +248,11 @@ export function LoanPaymentHistory({
             />
           </div>
           <div className="sm:col-span-2">
-            <Button type="submit" size="sm" disabled={adding}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={adding || addAmountExceedsMax}
+            >
               {adding ? tc("saving") : t("savePayment")}
             </Button>
           </div>

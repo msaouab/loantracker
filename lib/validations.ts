@@ -15,6 +15,7 @@ const defaultMessages: ValidationMessages = {
   totalAmountPositive: "Total amount must be greater than 0",
   amountPaidInt: "Amount paid must be a whole number",
   amountPaidNegative: "Amount paid cannot be negative",
+  amountPaidExceedsTotal: "Amount paid cannot exceed total amount",
   paymentAmountInt: "Payment amount must be a whole number",
   paymentAmountPositive: "Payment amount must be greater than 0",
   currentPasswordRequired: "Current password is required",
@@ -57,13 +58,22 @@ export function createLoanFieldsSchema(m: ValidationMessages) {
   });
 }
 
+function optionalAmountPaid(m: ValidationMessages) {
+  return z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? 0 : val),
+    z.coerce.number().int(m.amountPaidInt).min(0, m.amountPaidNegative)
+  );
+}
+
 export function createCreateLoanSchema(m: ValidationMessages) {
-  return createLoanFieldsSchema(m).extend({
-    amountPaid: z.coerce
-      .number()
-      .int(m.amountPaidInt)
-      .min(0, m.amountPaidNegative),
-  });
+  return createLoanFieldsSchema(m)
+    .extend({
+      amountPaid: optionalAmountPaid(m),
+    })
+    .refine((data) => data.amountPaid <= data.totalAmount, {
+      message: m.amountPaidExceedsTotal,
+      path: ["amountPaid"],
+    });
 }
 
 export function createUpdateLoanSchema(m: ValidationMessages) {

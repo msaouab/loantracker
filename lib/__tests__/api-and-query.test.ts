@@ -98,12 +98,13 @@ describe("buildLoanWhereSql", () => {
   });
 });
 
-describe("purge snapshot dashboard flow", () => {
-  it("keeps recovery rate stable when purged loans match live totals", () => {
-    const live = {
-      totalLoanAmount: 0,
-      amountRecovered: 0,
-      recoveredCount: 0,
+describe("open-loan dashboard metrics", () => {
+  it("does not fold purged history into the active portfolio", () => {
+    const openBook = {
+      totalLoanAmount: 1000,
+      amountRecovered: 400,
+      outstanding: 600,
+      recoveredLoanCount: 2,
     };
     const purged: SnapshotTotals = {
       purgedLoanCount: 2,
@@ -116,12 +117,13 @@ describe("purge snapshot dashboard flow", () => {
       purgedClientTotals: { Ali: 1000, Sara: 2000 },
     };
 
-    const totalLoanAmount = live.totalLoanAmount + purged.purgedTotalAmount;
-    const amountRecovered = live.amountRecovered + purged.purgedAmountRecovered;
     const recoveryRate =
-      totalLoanAmount > 0 ? (amountRecovered / totalLoanAmount) * 100 : 0;
+      openBook.totalLoanAmount > 0
+        ? (openBook.amountRecovered / openBook.totalLoanAmount) * 100
+        : 0;
 
-    expect(recoveryRate).toBe(100);
+    expect(recoveryRate).toBe(40);
+    expect(openBook.totalLoanAmount + purged.purgedTotalAmount).toBe(4000);
     expect(countUniqueClients([], purged.purgedClientNames)).toBe(2);
     expect(
       mergeTopClients([], purged.purgedClientTotals).map((row) => row.name)
