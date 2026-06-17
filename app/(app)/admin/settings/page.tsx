@@ -21,7 +21,6 @@ export default async function AdminSettingsPage() {
       <SettingsForm
         initialFullName={session?.user.name ?? ""}
         email={session?.user.email ?? ""}
-        initialLocale={session?.user.locale ?? "en"}
       />
       <ActivityFeed
         admin

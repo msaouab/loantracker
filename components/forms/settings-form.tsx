@@ -17,10 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Separator } from "@/components/ui/separator";
-import { LanguageSelect } from "@/components/shared/language-select";
 import { changePassword, updateProfile } from "@/lib/settings-client";
 import { ApiRequestError } from "@/lib/api-client";
-import type { AppLocale } from "@/lib/locale";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -30,11 +28,9 @@ function FieldError({ message }: { message?: string }) {
 export function SettingsForm({
   initialFullName,
   email,
-  initialLocale,
 }: {
   initialFullName: string;
   email: string;
-  initialLocale: AppLocale;
 }) {
   const router = useRouter();
   const t = useTranslations("settings");
@@ -165,12 +161,6 @@ export function SettingsForm({
               {passwordLoading ? tc("updating") : t("changePassword")}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      <Card className="surface-card border-0 ring-1 ring-foreground/10">
-        <CardContent className="pt-6">
-          <LanguageSelect initialLocale={initialLocale} />
         </CardContent>
       </Card>
     </div>

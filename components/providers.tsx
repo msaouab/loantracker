@@ -3,6 +3,7 @@
 import { DirectionProvider } from "@radix-ui/react-direction";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export function Providers({
   children,
@@ -15,10 +16,12 @@ export function Providers({
   // context — not from <html dir> — for positioning and arrow-key navigation.
   return (
     <DirectionProvider dir={dir}>
-      <ThemeProvider>
-        {children}
-        <Toaster />
-      </ThemeProvider>
+      <TooltipProvider delayDuration={300}>
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
+      </TooltipProvider>
     </DirectionProvider>
   );
 }

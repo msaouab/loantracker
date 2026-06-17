@@ -3,27 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { Languages } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { LOCALE_LABELS, LOCALES, type AppLocale } from "@/lib/locale";
+import { LanguageIconPicker } from "@/components/shared/language-icon-picker";
+import type { AppLocale } from "@/lib/locale";
 import { notifyError, notifySuccess } from "@/lib/toast";
 
 /** Language picker for unauthenticated pages (cookie only, no API). */
 export function GuestLanguageSwitcher() {
-  const t = useTranslations("common");
   const ts = useTranslations("settings");
   const locale = useLocale() as AppLocale;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  async function handleChange(nextLocale: string) {
+  async function handleChange(nextLocale: AppLocale) {
     if (nextLocale === locale || pending) return;
 
     try {
@@ -40,27 +31,10 @@ export function GuestLanguageSwitcher() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="border-border/70 bg-background/80"
-          aria-label={t("language")}
-          disabled={pending}
-        >
-          <Languages className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuRadioGroup value={locale} onValueChange={handleChange}>
-          {LOCALES.map((code) => (
-            <DropdownMenuRadioItem key={code} value={code}>
-              {LOCALE_LABELS[code]}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <LanguageIconPicker
+      value={locale}
+      onChange={handleChange}
+      disabled={pending}
+    />
   );
 }

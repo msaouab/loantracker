@@ -19,7 +19,6 @@ export default async function SettingsPage() {
       <SettingsForm
         initialFullName={session.user.name ?? ""}
         email={session.user.email ?? ""}
-        initialLocale={session.user.locale ?? "en"}
       />
       <DeletedLoans />
       <ActivityFeed

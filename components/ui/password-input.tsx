@@ -20,7 +20,7 @@ export function PasswordInput({ className, ...props }: PasswordInputProps) {
       <button
         type="button"
         onClick={() => setVisible((current) => !current)}
-        className="absolute top-1/2 end-2.5 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+        className="absolute top-1/2 inset-e-2.5 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
         aria-label={visible ? "Hide password" : "Show password"}
       >
         {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

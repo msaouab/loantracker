@@ -7,6 +7,7 @@ import { Check, Plus, RefreshCw, ShieldBan, Snowflake } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
 import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
+import { PresenceIndicator } from "@/components/admin/presence-indicator";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,33 +25,8 @@ import {
   updateAdminUser,
   type AdminUser,
 } from "@/lib/admin-client";
-import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
-import { isOnline } from "@/lib/presence";
-
-function PresenceDot({
-  lastSeenAt,
-  labels,
-  locale,
-}: {
-  lastSeenAt: string | null;
-  labels: { online: string; offline: string; lastSeen: (time: string) => string };
-  locale: AppLocale;
-}) {
-  const online = isOnline(lastSeenAt);
-  const label = online
-    ? labels.online
-    : lastSeenAt
-      ? labels.lastSeen(formatRelativeTime(lastSeenAt, locale))
-      : labels.offline;
-  return (
-    <span
-      className={`inline-block size-2 shrink-0 rounded-full ${online ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
-      title={label}
-      aria-label={label}
-    />
-  );
-}
 
 function StatusBadge({
   status,
@@ -76,11 +52,6 @@ export function UserTable() {
     active: t("statusActive"),
     frozen: t("statusFrozen"),
     pending: t("statusPending"),
-  };
-  const presenceLabels = {
-    online: t("online"),
-    offline: t("offline"),
-    lastSeen: (time: string) => t("lastSeen", { time }),
   };
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,11 +193,7 @@ export function UserTable() {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
                           <span className="inline-flex items-center gap-2">
-                            <PresenceDot
-                              lastSeenAt={user.lastSeenAt}
-                              labels={presenceLabels}
-                              locale={locale}
-                            />
+                            <PresenceIndicator lastSeenAt={user.lastSeenAt} />
                             <Link
                               href={`/admin/users/${user.id}`}
                               className="hover:text-primary hover:underline"

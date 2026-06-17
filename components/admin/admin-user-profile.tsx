@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Check, ShieldBan, Snowflake } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
+import { PresenceIndicator } from "@/components/admin/presence-indicator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,8 +29,8 @@ import {
 } from "@/lib/admin-client";
 import { ApiRequestError } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
-import { isOnline } from "@/lib/presence";
 import type { AppLocale } from "@/lib/locale";
+import { isOnline } from "@/lib/presence";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -163,10 +164,7 @@ export function AdminUserProfile({ initialUser }: { initialUser: AdminUser }) {
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={user.status} labels={statusLabels} />
             <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-              <span
-                className={`inline-block size-2 shrink-0 rounded-full ${isOnline(user.lastSeenAt) ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
-                aria-hidden
-              />
+              <PresenceIndicator lastSeenAt={user.lastSeenAt} />
               {isOnline(user.lastSeenAt)
                 ? t("online")
                 : user.lastSeenAt

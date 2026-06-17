@@ -3,14 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { Languages } from "lucide-react";
 import {
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { LOCALE_LABELS, LOCALES, type AppLocale } from "@/lib/locale";
+import { LanguageIconPicker } from "@/components/shared/language-icon-picker";
+import type { AppLocale } from "@/lib/locale";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { request } from "@/lib/api-client";
 
@@ -21,7 +19,7 @@ export function LanguageMenuItems() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  async function handleChange(nextLocale: string) {
+  async function handleChange(nextLocale: AppLocale) {
     if (nextLocale === locale || pending) return;
 
     try {
@@ -44,14 +42,13 @@ export function LanguageMenuItems() {
   return (
     <>
       <DropdownMenuLabel>{t("language")}</DropdownMenuLabel>
-      <DropdownMenuRadioGroup value={locale} onValueChange={handleChange}>
-        {LOCALES.map((code) => (
-          <DropdownMenuRadioItem key={code} value={code} disabled={pending}>
-            <Languages className="me-2 h-4 w-4" />
-            {LOCALE_LABELS[code]}
-          </DropdownMenuRadioItem>
-        ))}
-      </DropdownMenuRadioGroup>
+      <div className="px-2 pb-2">
+        <LanguageIconPicker
+          value={locale}
+          onChange={handleChange}
+          disabled={pending}
+        />
+      </div>
       <DropdownMenuSeparator />
     </>
   );

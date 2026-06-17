@@ -209,7 +209,7 @@ export function LoanTable({
         toolbar={
           <div className={PAGE_HEADER_TOOLBAR_CLASS}>
             <div className="relative min-w-0 flex-1">
-              <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute inset-s-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="h-10 border-border/70 bg-muted/20 ps-9"
                 placeholder={t("searchPlaceholder")}
@@ -292,13 +292,23 @@ export function LoanTable({
 
                 return (
                   <Fragment key={loan.id}>
-                    <TableRow>
+                    <TableRow
+                      className={cn(
+                        "cursor-pointer",
+                        isExpanded && "bg-muted/30"
+                      )}
+                      onClick={() => toggleExpanded(loan.id)}
+                      aria-expanded={isExpanded}
+                    >
                       <TableCell className="w-10 px-2">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon-sm"
-                          onClick={() => toggleExpanded(loan.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleExpanded(loan.id);
+                          }}
                           aria-expanded={isExpanded}
                           aria-label={
                             isExpanded
@@ -314,7 +324,11 @@ export function LoanTable({
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium">
-                        <Link href={`/loans/${loan.id}`} className="hover:underline">
+                        <Link
+                          href={`/loans/${loan.id}`}
+                          className="hover:underline"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {loan.clientName}
                         </Link>
                       </TableCell>
@@ -343,7 +357,7 @@ export function LoanTable({
                           {formatRecoveredRetention(loan.recoveredAt ?? null, locale, retentionLabels) ?? "—"}
                         </TableCell>
                       ) : null}
-                      <TableCell className="text-end">
+                      <TableCell className="text-end" onClick={(event) => event.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="icon" asChild>
                             <Link href={`/loans/${loan.id}/edit`}>
