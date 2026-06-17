@@ -25,20 +25,6 @@ function getSeedUserConfig() {
   return { email, password, fullName };
 }
 
-function getSeedAdminConfig() {
-  const email = process.env.SEED_ADMIN_EMAIL?.trim();
-  const password = process.env.SEED_ADMIN_PASSWORD;
-  const fullName = process.env.SEED_ADMIN_NAME?.trim() || "Demo Admin";
-
-  if (!email || !password) {
-    throw new Error(
-      "SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set in .env before running db:seed."
-    );
-  }
-
-  return { email, password, fullName };
-}
-
 const LOAN_COUNT = 20;
 const DELETED_LOAN_COUNT = 3;
 
@@ -202,45 +188,13 @@ async function seedActivityLogs(prisma: PrismaClient, logs: ActivitySeed[]) {
 async function main() {
   const { email: demoEmail, password: demoPasswordPlain, fullName: demoName } =
     getSeedUserConfig();
-  const {
-    email: adminEmail,
-    password: adminPasswordPlain,
-    fullName: adminName,
-  } = getSeedAdminConfig();
 
   const adapter = new PrismaPg({
     connectionString: getDatabaseUrl(),
   });
   const prisma = new PrismaClient({ adapter });
 
-  const [demoPasswordHash, adminPasswordHash] = await Promise.all([
-    bcrypt.hash(demoPasswordPlain, 12),
-    bcrypt.hash(adminPasswordPlain, 12),
-  ]);
-
-  const admin = await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: {
-      fullName: adminName,
-      isAdmin: true,
-      isActivated: true,
-      isFrozen: false,
-      lastLoginAt: daysAgo(0, 9),
-    },
-    create: {
-      email: adminEmail,
-      password: adminPasswordHash,
-      fullName: adminName,
-      isAdmin: true,
-      isActivated: true,
-      isFrozen: false,
-      lastLoginAt: daysAgo(0, 9),
-    },
-  });
-
-  await prisma.activityLog.deleteMany({
-    where: { userId: admin.id },
-  });
+  const demoPasswordHash = await bcrypt.hash(demoPasswordPlain, 12);
 
   const demo = await prisma.user.upsert({
     where: { email: demoEmail },
@@ -343,30 +297,6 @@ async function main() {
   );
 
   const activityLogs: ActivitySeed[] = [
-    {
-      userId: admin.id,
-      action: ActivityActions.AUTH_LOGIN,
-      entityType: "session",
-      createdAt: daysAgo(0, 9, 15),
-      ...authActivityFields(ActivityActions.AUTH_LOGIN, {
-        ipAddress: SEED_IP_LOCAL,
-        userAgent: DEMO_USER_AGENT,
-        browser: "Chrome",
-        browserVersion: "120",
-        os: "macOS",
-        deviceType: "desktop",
-        language: "en-US",
-      }),
-    },
-    {
-      userId: admin.id,
-      action: ActivityActions.USER_APPROVED,
-      summary: `Approved account for ${demoName}`,
-      entityType: "user",
-      entityId: demo.id,
-      metadata: { email: demoEmail },
-      createdAt: daysAgo(14, 8),
-    },
     {
       userId: demo.id,
       action: ActivityActions.AUTH_LOGIN,
@@ -501,16 +431,12 @@ async function main() {
 
   console.log("Database seeded successfully.\n");
 
-  console.log("Demo admin:");
-  console.log(`  Email:    ${adminEmail}`);
-  console.log("  Password: (from SEED_ADMIN_PASSWORD in .env)");
-
-  console.log("\nDemo manager:");
+  console.log("Demo manager:");
   console.log(`  Email:    ${demoEmail}`);
   console.log("  Password: (from SEED_USER_PASSWORD in .env)");
 
   console.log("\nSeeded data summary:");
-  console.log(`  Users:         2 (1 admin, 1 manager)`);
+  console.log(`  Users:         1 (manager only)`);
   console.log(`  Loans:         ${LOAN_COUNT}`);
   console.log(`  Active:        ${activeLoans.length}`);
   console.log(`  Recovered:     ${recoveredLoans.length}`);

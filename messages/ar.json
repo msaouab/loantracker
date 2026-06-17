@@ -365,6 +365,7 @@
     "tabAccount": "الحساب",
     "tabUsers": "المستخدمون",
     "pageOf": "صفحة {page} من {totalPages}",
+    "rowsPerPage": "صفوف لكل صفحة",
     "refreshAria": "تحديث النشاط",
     "event": "حدث",
     "events": "أحداث",

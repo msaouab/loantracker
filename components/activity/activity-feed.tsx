@@ -45,6 +45,7 @@ import {
   ActivityFilters,
   type ActivityFilterValues,
 } from "@/components/activity/activity-filters";
+import { Dropdown } from "@/components/ui/dropdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -58,6 +59,85 @@ import { formatDateTime } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { notifyError } from "@/lib/toast";
+
+const ACTIVITY_PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+type ActivityPageSize = (typeof ACTIVITY_PAGE_SIZE_OPTIONS)[number];
+const DEFAULT_ACTIVITY_PAGE_SIZE: ActivityPageSize = 20;
+
+function ActivityTablePagination({
+  page,
+  totalPages,
+  total,
+  pageSize,
+  loading,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  pageSize: ActivityPageSize;
+  loading: boolean;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: ActivityPageSize) => void;
+}) {
+  const t = useTranslations("activity");
+  const tc = useTranslations("common");
+
+  if (total <= 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <Button
+        variant="outline"
+        className="w-full sm:w-auto"
+        disabled={page <= 1 || loading}
+        onClick={() => onPageChange(page - 1)}
+      >
+        {tc("previous")}
+      </Button>
+
+      <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-6">
+        <div className="flex items-center justify-center gap-2 sm:justify-start">
+          <span
+            id="activity-page-size-label"
+            className="text-sm whitespace-nowrap text-muted-foreground"
+          >
+            {t("rowsPerPage")}
+          </span>
+          <Dropdown
+            id="activity-page-size"
+            aria-label={t("rowsPerPage")}
+            value={String(pageSize)}
+            options={ACTIVITY_PAGE_SIZE_OPTIONS.map((size) => ({
+              value: String(size),
+              label: String(size),
+            }))}
+            onValueChange={(value) => {
+              onPageSizeChange(Number(value) as ActivityPageSize);
+            }}
+            className="h-8 w-16"
+            disabled={loading}
+          />
+        </div>
+        <span className="text-sm text-muted-foreground">
+          {t("pageOf", { page, totalPages })}
+        </span>
+      </div>
+
+      <Button
+        variant="outline"
+        className="w-full sm:w-auto"
+        disabled={page >= totalPages || loading}
+        onClick={() => onPageChange(page + 1)}
+      >
+        {tc("next")}
+      </Button>
+    </div>
+  );
+}
 
 function ActivityActionIcon({
   action,
@@ -230,6 +310,7 @@ export function ActivityFeed({
   const [activeTab, setActiveTab] = useState<ActivityTab>("all");
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<ActivityPageSize>(DEFAULT_ACTIVITY_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -259,7 +340,7 @@ export function ActivityFeed({
   const fetchParams = useMemo(
     () => ({
       page,
-      pageSize: 20,
+      pageSize,
       admin: orgWide,
       userId,
       category: categoryFilter,
@@ -273,6 +354,7 @@ export function ActivityFeed({
     }),
     [
       page,
+      pageSize,
       orgWide,
       userId,
       categoryFilter,
@@ -357,6 +439,16 @@ export function ActivityFeed({
   function goToPage(nextPage: number) {
     setLoading(true);
     setPage(nextPage);
+  }
+
+  function changePageSize(nextPageSize: ActivityPageSize) {
+    if (nextPageSize === pageSize) {
+      return;
+    }
+
+    setLoading(true);
+    setPageSize(nextPageSize);
+    setPage(1);
   }
 
   function selectTab(tab: ActivityTab) {
@@ -483,38 +575,37 @@ export function ActivityFeed({
                     showActor={showActor}
                   />
                 ))
-              : null}
+              : activities.length > 0
+                ? Array.from({ length: Math.min(pageSize, 5) }).map((_, index) => (
+                    <TableRow key={index}>
+                      {Array.from({ length: tableColumnCount }).map((__, cellIndex) => (
+                        <TableCell
+                          key={cellIndex}
+                          className={cellIndex === 0 ? "w-12 p-2" : undefined}
+                        >
+                          <Skeleton
+                            className={cn(
+                              "h-5 w-full max-w-32",
+                              cellIndex === 0 && "h-8 w-8 max-w-none rounded-lg"
+                            )}
+                          />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                : null}
           </TableBody>
         </Table>
 
-        {totalPages > 1 ? (
-          <>
-            <Separator />
-            <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
-              <p className="text-sm text-muted-foreground">
-                {t("pageOf", { page, totalPages })}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1 || loading}
-                  onClick={() => goToPage(Math.max(1, page - 1))}
-                >
-                  {tc("previous")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages || loading}
-                  onClick={() => goToPage(page + 1)}
-                >
-                  {tc("next")}
-                </Button>
-              </div>
-            </div>
-          </>
-        ) : null}
+        <ActivityTablePagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          loading={loading}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
       </>
     ) : (
     <>

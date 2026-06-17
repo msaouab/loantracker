@@ -365,6 +365,7 @@
     "tabAccount": "Account",
     "tabUsers": "Users",
     "pageOf": "Page {page} of {totalPages}",
+    "rowsPerPage": "Rows per page",
     "refreshAria": "Refresh activity",
     "event": "event",
     "events": "events",
