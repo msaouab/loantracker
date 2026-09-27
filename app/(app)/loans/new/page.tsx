@@ -21,15 +21,20 @@ export default function NewLoanPage() {
 
       <div className="surface-card p-4 sm:p-6">
         <LoanForm
+            enableClientLookup
             submitLabel={t("createLoan")}
             cancelHref="/loans"
             onSubmit={async (values) => {
-              await createLoan({
+              const result = await createLoan({
                 ...values,
                 loanDate: dateParamToIso(values.loanDate),
               });
 
-              notifySuccess(t("loanCreated", { clientName: values.clientName }));
+              notifySuccess(
+                result.reopened
+                  ? t("loanReopened", { clientName: values.clientName })
+                  : t("loanCreated", { clientName: values.clientName })
+              );
               router.push("/loans");
               router.refresh();
             }}

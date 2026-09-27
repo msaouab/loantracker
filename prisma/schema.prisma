@@ -57,23 +57,25 @@ model PurgedClientStat {
 }
 
 model Loan {
-  id          String    @id @default(uuid())
-  userId      String
-  clientName  String
-  totalAmount Int
-  amountPaid  Int       @default(0)
-  loanDate    DateTime  @default(now())
-  description String?
-  clientTrust Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  recoveredAt DateTime?
+  id            String    @id @default(uuid())
+  userId        String
+  clientName    String
+  clientNameKey String
+  totalAmount   Int
+  amountPaid    Int       @default(0)
+  loanDate      DateTime  @default(now())
+  description   String?
+  clientTrust   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  recoveredAt   DateTime?
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments LoanPayment[]
 
   @@index([userId])
+  @@index([userId, clientNameKey])
   @@index([deletedAt])
   @@index([userId, deletedAt])
   @@index([recoveredAt])

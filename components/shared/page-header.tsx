@@ -55,6 +55,8 @@ type PageHeaderActionProps = {
   label: string;
   icon: LucideIcon;
   href?: string;
+  /** Use a native anchor (no Next.js prefetch/router) — required for file downloads. */
+  download?: boolean;
   className?: string;
   variant?: VariantProps<typeof buttonVariants>["variant"];
 } & Omit<React.ComponentProps<typeof Button>, "children" | "asChild">;
@@ -63,6 +65,7 @@ export function PageHeaderAction({
   label,
   icon: Icon,
   href,
+  download = false,
   className,
   variant,
   ...props
@@ -73,6 +76,20 @@ export function PageHeaderAction({
       <span className="hidden sm:inline">{label}</span>
     </>
   );
+
+  if (href && download) {
+    return (
+      <Button
+        variant={variant}
+        className={cn(PAGE_HEADER_ACTION_CLASS, className)}
+        asChild
+      >
+        <a href={href} aria-label={label} download>
+          {content}
+        </a>
+      </Button>
+    );
+  }
 
   if (href) {
     return (

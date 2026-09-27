@@ -6,6 +6,7 @@ export const ActivityActions = {
   LOAN_UPDATED: "loan.updated",
   LOAN_DELETED: "loan.deleted",
   LOAN_RESTORED: "loan.restored",
+  LOAN_STATEMENT_EXPORTED: "loan.statement_exported",
   LOANS_PURGED: "loans.purged",
   RECOVERED_LOANS_PURGED: "loans.recovered_purged",
   PAYMENT_ADDED: "payment.added",
@@ -30,6 +31,7 @@ export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   [ActivityActions.LOAN_UPDATED]: "Loan updated",
   [ActivityActions.LOAN_DELETED]: "Loan deleted",
   [ActivityActions.LOAN_RESTORED]: "Loan restored",
+  [ActivityActions.LOAN_STATEMENT_EXPORTED]: "Loan statement exported",
   [ActivityActions.LOANS_PURGED]: "Expired deleted loans purged",
   [ActivityActions.RECOVERED_LOANS_PURGED]: "Expired recovered loans purged",
   [ActivityActions.PAYMENT_ADDED]: "Payment recorded",
@@ -107,6 +109,7 @@ export function getActionsForTab(tab: ActivityTab): ActivityAction[] | undefined
         ActivityActions.LOAN_UPDATED,
         ActivityActions.LOAN_DELETED,
         ActivityActions.LOAN_RESTORED,
+        ActivityActions.LOAN_STATEMENT_EXPORTED,
         ActivityActions.LOANS_PURGED,
         ActivityActions.RECOVERED_LOANS_PURGED,
       ];

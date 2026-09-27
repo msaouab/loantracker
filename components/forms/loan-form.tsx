@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { todayDateParam } from "@/lib/dates";
 import { formatCurrency } from "@/lib/format";
 import { getOutstanding } from "@/lib/loans";
+import { lookupClientName, type ClientLookupResult } from "@/lib/loans-client";
 import type { AppLocale } from "@/lib/locale";
 import { notifyError } from "@/lib/toast";
 
@@ -30,6 +31,7 @@ type LoanFormProps = {
   onSubmit: (values: LoanFormValues) => Promise<void>;
   cancelHref: string;
   amountPaidReadOnly?: boolean;
+  enableClientLookup?: boolean;
 };
 
 function createInitialValues(initialValues?: Partial<LoanFormValues>): LoanFormValues {
@@ -56,6 +58,7 @@ export function LoanForm({
   onSubmit,
   cancelHref,
   amountPaidReadOnly = false,
+  enableClientLookup = false,
 }: LoanFormProps) {
   const t = useTranslations("loans");
   const tc = useTranslations("common");
@@ -66,6 +69,8 @@ export function LoanForm({
     return paid > 0 ? String(paid) : "";
   });
   const [loading, setLoading] = useState(false);
+  const [clientLookup, setClientLookup] = useState<ClientLookupResult | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   const parsedAmountPaid =
     amountPaidInput.trim() === ""
@@ -73,9 +78,44 @@ export function LoanForm({
       : Math.max(0, Math.round(Number(amountPaidInput) || 0));
 
   const outstanding = getOutstanding(values.totalAmount, parsedAmountPaid);
+  const hasActiveDuplicate = clientLookup?.status === "active";
+  const recoveredHint = clientLookup?.status === "recovered";
+
+  useEffect(() => {
+    if (!enableClientLookup) {
+      setClientLookup(null);
+      return;
+    }
+
+    const trimmed = values.clientName.trim();
+    if (!trimmed) {
+      setClientLookup(null);
+      setLookupLoading(false);
+      return;
+    }
+
+    setLookupLoading(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await lookupClientName(trimmed);
+        setClientLookup(result);
+      } catch {
+        setClientLookup(null);
+      } finally {
+        setLookupLoading(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [enableClientLookup, values.clientName]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (hasActiveDuplicate) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -100,8 +140,29 @@ export function LoanForm({
             onChange={(event) =>
               setValues((current) => ({ ...current, clientName: event.target.value }))
             }
+            aria-invalid={hasActiveDuplicate}
+            aria-describedby={
+              hasActiveDuplicate
+                ? "clientName-error"
+                : recoveredHint
+                  ? "clientName-hint"
+                  : undefined
+            }
             required
           />
+          {enableClientLookup && lookupLoading ? (
+            <p className="text-xs text-muted-foreground">{tc("loading")}</p>
+          ) : null}
+          {hasActiveDuplicate ? (
+            <p id="clientName-error" className="text-sm text-destructive">
+              {t("clientNameActiveDuplicate")}
+            </p>
+          ) : null}
+          {recoveredHint ? (
+            <p id="clientName-hint" className="text-sm text-muted-foreground">
+              {t("clientNameRecoveredHint")}
+            </p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
@@ -213,7 +274,11 @@ export function LoanForm({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button type="submit" className="w-full shadow-sm shadow-primary/20 sm:w-auto" disabled={loading}>
+        <Button
+          type="submit"
+          className="w-full shadow-sm shadow-primary/20 sm:w-auto"
+          disabled={loading || hasActiveDuplicate}
+        >
           {loading ? tc("saving") : submitLabel}
         </Button>
         <Button variant="outline" className="w-full sm:w-auto" asChild>

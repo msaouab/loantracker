@@ -62,26 +62,27 @@ export const GET = withManager(async (req, userId) => {
 export const POST = withManager(async (req, userId) => {
   const createLoanSchema = await getCreateLoanSchema();
   const input = parseOrThrow(createLoanSchema, await req.json());
-  const loan = await createLoan(userId, input);
+  const { loan, reopened } = await createLoan(userId, input);
 
   await logActivityFromRequest(userId, req, {
-    action: ActivityActions.LOAN_CREATED,
-    summary: `Created loan for ${loan.clientName} (${formatCurrency(loan.totalAmount)})`,
+    action: reopened ? ActivityActions.LOAN_UPDATED : ActivityActions.LOAN_CREATED,
+    summary: reopened
+      ? `Reopened loan for ${loan.clientName} (${formatCurrency(loan.totalAmount)})`
+      : `Created loan for ${loan.clientName} (${formatCurrency(loan.totalAmount)})`,
     entityType: "loan",
     entityId: loan.id,
     metadata: {
       clientName: loan.clientName,
       totalAmount: loan.totalAmount,
+      ...(reopened ? { reopened: true } : {}),
     },
   });
 
   return apiOk(
     {
-      loan: {
-        ...serializeLoan(loan),
-        paymentCount: input.amountPaid > 0 ? 1 : 0,
-      },
+      loan: serializeLoan(loan),
+      reopened,
     },
-    { status: 201 }
+    { status: reopened ? 200 : 201 }
   );
 });

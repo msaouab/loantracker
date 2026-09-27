@@ -101,7 +101,7 @@ export async function fetchLoan(id: string) {
 }
 
 export async function createLoan(payload: CreateLoanPayload) {
-  return request<LoanResponse>(
+  return request<{ loan: LoanRecord; reopened?: boolean }>(
     "/api/loans",
     {
       method: "POST",
@@ -145,5 +145,19 @@ export async function restoreLoan(id: string) {
     `/api/loans/${id}/restore`,
     { method: "POST" },
     "Failed to restore loan"
+  );
+}
+
+export type ClientLookupResult =
+  | { status: "new" }
+  | { status: "active"; loanId: string; clientName: string }
+  | { status: "recovered"; loanId: string; clientName: string };
+
+export async function lookupClientName(clientName: string) {
+  const query = new URLSearchParams({ clientName });
+  return request<ClientLookupResult>(
+    `/api/loans/client-lookup?${query.toString()}`,
+    {},
+    "Failed to look up client"
   );
 }

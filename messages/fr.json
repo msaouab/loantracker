@@ -320,7 +320,23 @@
     "failedLoadLoan": "Échec du chargement du prêt",
     "editLoan": "Modifier le prêt",
     "editLoanDescription": "Mettre à jour les détails du prêt pour {clientName}.",
-    "loanUpdated": "Prêt mis à jour pour {clientName}"
+    "loanUpdated": "Prêt mis à jour pour {clientName}",
+    "loanReopened": "Compte rouvert pour {clientName} — le nouveau montant a été ajouté",
+    "downloadStatement": "Télécharger le PDF",
+    "clientNameRecoveredHint": "Ce client a été entièrement remboursé. Enregistrer rouvrira son compte et conservera son historique de paiements.",
+    "clientNameActiveDuplicate": "Vous avez déjà un prêt actif pour ce client."
+  },
+  "pdf": {
+    "statementTitle": "Relevé de prêt",
+    "client": "Client",
+    "issuer": "Émis par",
+    "generatedOn": "Généré le",
+    "noPayments": "Aucun paiement enregistré pour ce prêt.",
+    "columnDate": "Date",
+    "columnAmount": "Montant",
+    "columnNote": "Note",
+    "filenamePrefix": "releve-pret",
+    "disclaimer": "Ce document est un relevé de prêt à titre informatif. Il ne constitue pas une facture fiscale."
   },
   "settings": {
     "title": "Paramètres",
@@ -393,6 +409,7 @@
     "action_loan_updated": "Prêt mis à jour",
     "action_loan_deleted": "Prêt supprimé",
     "action_loan_restored": "Prêt restauré",
+    "action_loan_statement_exported": "Relevé de prêt exporté",
     "action_loans_purged": "Prêts supprimés expirés purgés",
     "action_loans_recovered_purged": "Prêts récupérés expirés purgés",
     "action_payment_added": "Paiement enregistré",
@@ -444,6 +461,8 @@
     "passwordRequired": "Le mot de passe est requis",
     "passwordsMismatch": "Les mots de passe ne correspondent pas",
     "clientNameRequired": "Le nom du client est requis",
+    "clientNameDuplicateActive": "Vous avez déjà un prêt actif pour ce client.",
+    "clientNameTaken": "Un client avec ce nom existe déjà.",
     "totalAmountInt": "Le montant total doit être un nombre entier",
     "totalAmountPositive": "Le montant total doit être supérieur à 0",
     "amountPaidInt": "Le montant payé doit être un nombre entier",

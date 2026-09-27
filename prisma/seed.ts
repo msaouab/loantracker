@@ -8,6 +8,7 @@ import type { ClientInfo } from "../lib/client-info";
 import { clientInfoToDeviceMetadata } from "../lib/client-info";
 import { getDatabaseUrl } from "../lib/database-url";
 import { anonymizeIp } from "../lib/ip-anonymization";
+import { normalizeClientName } from "../lib/client-name";
 import { computeRecoveredAt } from "../lib/loan-recovery";
 import { INITIAL_PAYMENT_NOTE } from "../lib/payment-display";
 import { formatCurrency } from "../lib/loans";
@@ -252,6 +253,7 @@ async function main() {
       data: {
         userId: demo.id,
         clientName,
+        clientNameKey: normalizeClientName(clientName),
         totalAmount,
         amountPaid,
         loanDate,

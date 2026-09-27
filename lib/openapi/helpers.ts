@@ -66,6 +66,14 @@ export const errorResponses: Record<string, Response> = {
       },
     },
   },
+  Conflict: {
+    description: "Request conflicts with existing data",
+    content: {
+      "application/json": {
+        schema: ref("ApiError"),
+      },
+    },
+  },
 };
 
 export const sessionSecurity: OpenAPIV3.SecurityRequirementObject[] = [

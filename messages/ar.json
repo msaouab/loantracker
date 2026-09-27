@@ -320,7 +320,23 @@
     "failedLoadLoan": "فشل تحميل القرض",
     "editLoan": "تعديل القرض",
     "editLoanDescription": "تحديث تفاصيل القرض لـ {clientName}.",
-    "loanUpdated": "تم تحديث قرض {clientName}"
+    "loanUpdated": "تم تحديث قرض {clientName}",
+    "loanReopened": "تم إعادة فتح حساب {clientName} مع إضافة مبلغ القرض الجديد",
+    "downloadStatement": "تنزيل PDF",
+    "clientNameRecoveredHint": "تم سداد هذا العميل بالكامل. الحفظ سيعيد فتح حسابه مع الاحتفاظ بسجل المدفوعات.",
+    "clientNameActiveDuplicate": "لديك بالفعل قرض نشط لهذا العميل."
+  },
+  "pdf": {
+    "statementTitle": "كشف القرض",
+    "client": "العميل",
+    "issuer": "صادر عن",
+    "generatedOn": "تاريخ الإنشاء",
+    "noPayments": "لا توجد مدفوعات مسجلة لهذا القرض.",
+    "columnDate": "التاريخ",
+    "columnAmount": "المبلغ",
+    "columnNote": "ملاحظة",
+    "filenamePrefix": "kashf-qard",
+    "disclaimer": "هذا المستند كشف قرض لأغراض إعلامية. وهو ليس فاتورة ضريبية."
   },
   "settings": {
     "title": "الإعدادات",
@@ -393,6 +409,7 @@
     "action_loan_updated": "تحديث قرض",
     "action_loan_deleted": "حذف قرض",
     "action_loan_restored": "استعادة قرض",
+    "action_loan_statement_exported": "تصدير كشف القرض",
     "action_loans_purged": "مسح القروض المحذوفة المنتهية",
     "action_loans_recovered_purged": "مسح القروض المستردة المنتهية",
     "action_payment_added": "تسجيل دفعة",
@@ -444,6 +461,8 @@
     "passwordRequired": "كلمة المرور مطلوبة",
     "passwordsMismatch": "كلمتا المرور غير متطابقتين",
     "clientNameRequired": "اسم العميل مطلوب",
+    "clientNameDuplicateActive": "لديك بالفعل قرض نشط لهذا العميل.",
+    "clientNameTaken": "يوجد عميل بهذا الاسم بالفعل.",
     "totalAmountInt": "يجب أن يكون المبلغ الإجمالي رقماً صحيحاً",
     "totalAmountPositive": "يجب أن يكون المبلغ الإجمالي أكبر من 0",
     "amountPaidInt": "يجب أن يكون المبلغ المدفوع رقماً صحيحاً",

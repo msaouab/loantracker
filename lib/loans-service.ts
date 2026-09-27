@@ -1,7 +1,13 @@
+import { Prisma } from "@/app/generated/prisma/client";
 import { getLocale, getTranslations } from "next-intl/server";
-import type { Prisma } from "@/app/generated/prisma/client";
+import type { Prisma as PrismaTypes } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { NotFoundError, ValidationError } from "@/lib/errors";
+import {
+  formatClientNameForStorage,
+  isBlankClientName,
+  normalizeClientName,
+} from "@/lib/client-name";
+import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import { getErrorMessage } from "@/lib/server-errors";
 import type { AppLocale } from "@/lib/locale";
 import {
@@ -9,10 +15,13 @@ import {
   getOutstanding,
   RECOVERED_LOAN_RETENTION_DAYS,
 } from "@/lib/loans";
+import { isOpenLoan, isRecoveredLoan } from "@/lib/loan-status";
 import { recordPurgedRecoveredLoans } from "@/lib/user-stats-service";
 import type { CreateLoanInput, LoanPaymentInput, UpdateLoanInput } from "@/lib/validations";
+import { computeRecoveredAt } from "@/lib/loan-recovery";
+import { INITIAL_PAYMENT_NOTE } from "@/lib/payment-display";
 
-type Db = Prisma.TransactionClient;
+type Db = PrismaTypes.TransactionClient;
 
 /**
  * Resolves the request-locale translator + locale for business-rule validation
@@ -25,6 +34,27 @@ async function getBusinessRuleValidator() {
     getLocale(),
   ]);
   return { t, locale: locale as AppLocale };
+}
+
+async function throwDuplicateActiveClientError() {
+  const t = await getTranslations("validation");
+  const message = t("clientNameDuplicateActive");
+  throw new ConflictError(message, { clientName: [message] });
+}
+
+function isUniqueClientNameViolation(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    Array.isArray(error.meta?.target) &&
+    (error.meta.target as string[]).includes("clientNameKey")
+  );
+}
+
+function parseClientNameFields(input: { clientName: string }) {
+  const clientName = formatClientNameForStorage(input.clientName);
+  const clientNameKey = normalizeClientName(clientName);
+  return { clientName, clientNameKey };
 }
 
 export const DELETED_LOAN_RETENTION_DAYS = 30;
@@ -42,9 +72,6 @@ function recoveredCutoff() {
   return cutoff;
 }
 
-import { computeRecoveredAt } from "@/lib/loan-recovery";
-import { INITIAL_PAYMENT_NOTE } from "@/lib/payment-display";
-
 export { computeRecoveredAt };
 
 export type LoanPaymentRecord = {
@@ -55,6 +82,32 @@ export type LoanPaymentRecord = {
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type ClientLookupStatus = "new" | "active" | "recovered";
+
+export type ClientLookupResult =
+  | { status: "new" }
+  | { status: "active"; loanId: string; clientName: string }
+  | { status: "recovered"; loanId: string; clientName: string };
+
+export type CreateLoanResult = {
+  loan: {
+    id: string;
+    userId: string;
+    clientName: string;
+    clientNameKey: string;
+    totalAmount: number;
+    amountPaid: number;
+    loanDate: Date;
+    description: string | null;
+    clientTrust: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+    recoveredAt: Date | null;
+  };
+  reopened: boolean;
 };
 
 export function serializePayment(payment: LoanPaymentRecord) {
@@ -75,7 +128,70 @@ export async function getOwnedLoanOrThrow(db: Db, userId: string, loanId: string
   return loan;
 }
 
-export async function listPayments(db: Db, loanId: string) {
+export async function lookupClientByName(
+  userId: string,
+  rawName: string
+): Promise<ClientLookupResult> {
+  if (isBlankClientName(rawName)) {
+    return { status: "new" };
+  }
+
+  const { clientNameKey } = parseClientNameFields({ clientName: rawName });
+  const loan = await prisma.loan.findFirst({
+    where: { userId, clientNameKey, deletedAt: null },
+    select: {
+      id: true,
+      clientName: true,
+      amountPaid: true,
+      totalAmount: true,
+    },
+  });
+
+  if (!loan) {
+    return { status: "new" };
+  }
+
+  if (isOpenLoan(loan.amountPaid, loan.totalAmount)) {
+    return { status: "active", loanId: loan.id, clientName: loan.clientName };
+  }
+
+  return { status: "recovered", loanId: loan.id, clientName: loan.clientName };
+}
+
+async function throwClientNameTakenError() {
+  const t = await getTranslations("validation");
+  const message = t("clientNameTaken");
+  throw new ConflictError(message, { clientName: [message] });
+}
+
+async function assertClientNameAvailableForRename(
+  db: Db,
+  userId: string,
+  clientNameKey: string,
+  excludeLoanId: string
+) {
+  const conflict = await db.loan.findFirst({
+    where: {
+      userId,
+      clientNameKey,
+      deletedAt: null,
+      id: { not: excludeLoanId },
+    },
+    select: { amountPaid: true, totalAmount: true },
+  });
+
+  if (!conflict) {
+    return;
+  }
+
+  if (isOpenLoan(conflict.amountPaid, conflict.totalAmount)) {
+    await throwDuplicateActiveClientError();
+  }
+
+  await throwClientNameTakenError();
+}
+
+async function listPayments(db: Db, loanId: string) {
   return db.loanPayment.findMany({
     where: { loanId },
     orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
@@ -96,72 +212,170 @@ async function syncAmountPaid(db: Db, loanId: string): Promise<number> {
   return amountPaid;
 }
 
-export async function createLoan(userId: string, input: CreateLoanInput) {
+async function addInitialPayment(
+  db: Db,
+  loanId: string,
+  amountPaid: number,
+  paidAt: Date
+) {
+  if (amountPaid <= 0) {
+    return;
+  }
+
+  await db.loanPayment.create({
+    data: {
+      loanId,
+      amount: amountPaid,
+      paidAt,
+      note: INITIAL_PAYMENT_NOTE,
+    },
+  });
+}
+
+export async function createLoan(userId: string, input: CreateLoanInput): Promise<CreateLoanResult> {
+  const { clientName, clientNameKey } = parseClientNameFields(input);
+
+  if (isBlankClientName(clientName)) {
+    const { t } = await getBusinessRuleValidator();
+    throw new ValidationError({ clientName: [t("clientNameRequired")] });
+  }
+
   if (input.amountPaid > input.totalAmount) {
     const { t } = await getBusinessRuleValidator();
     throw new ValidationError({ amountPaid: [t("amountPaidExceedsTotal")] });
   }
-  return prisma.$transaction(async (tx) => {
-    const loan = await tx.loan.create({
-      data: {
-        userId,
-        clientName: input.clientName,
-        totalAmount: input.totalAmount,
-        amountPaid: 0,
-        loanDate: input.loanDate ?? new Date(),
-        description: input.description?.trim() || null,
-        clientTrust: input.clientTrust,
-      },
-    });
-    if (input.amountPaid > 0) {
-      await tx.loanPayment.create({
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existing = await tx.loan.findFirst({
+        where: { userId, clientNameKey, deletedAt: null },
+      });
+
+      if (existing && isOpenLoan(existing.amountPaid, existing.totalAmount)) {
+        await throwDuplicateActiveClientError();
+      }
+
+      const loanDate = input.loanDate ?? new Date();
+
+      if (existing && isRecoveredLoan(existing.amountPaid, existing.totalAmount)) {
+        const newTotalAmount = existing.totalAmount + input.totalAmount;
+        const paidAfterReopen = existing.amountPaid + input.amountPaid;
+
+        if (paidAfterReopen > newTotalAmount) {
+          const { t } = await getBusinessRuleValidator();
+          throw new ValidationError({ amountPaid: [t("amountPaidExceedsTotal")] });
+        }
+
+        await tx.loan.update({
+          where: { id: existing.id },
+          data: {
+            clientName,
+            clientNameKey,
+            totalAmount: newTotalAmount,
+            loanDate,
+            description: input.description?.trim() || null,
+            clientTrust: input.clientTrust,
+            recoveredAt: null,
+          },
+        });
+
+        await addInitialPayment(tx, existing.id, input.amountPaid, loanDate);
+        const amountPaid = await syncAmountPaid(tx, existing.id);
+        const loan = await tx.loan.findUniqueOrThrow({ where: { id: existing.id } });
+
+        return {
+          loan: { ...loan, amountPaid },
+          reopened: true,
+        };
+      }
+
+      const loan = await tx.loan.create({
         data: {
-          loanId: loan.id,
-          amount: input.amountPaid,
-          paidAt: loan.loanDate,
-          note: INITIAL_PAYMENT_NOTE,
+          userId,
+          clientName,
+          clientNameKey,
+          totalAmount: input.totalAmount,
+          amountPaid: 0,
+          loanDate,
+          description: input.description?.trim() || null,
+          clientTrust: input.clientTrust,
         },
       });
-      const amountPaid = await syncAmountPaid(tx, loan.id);
-      return {
-        ...loan,
-        amountPaid,
-        recoveredAt: computeRecoveredAt(amountPaid, loan.totalAmount, loan.recoveredAt),
-      };
+
+      await addInitialPayment(tx, loan.id, input.amountPaid, loanDate);
+
+      if (input.amountPaid > 0) {
+        const amountPaid = await syncAmountPaid(tx, loan.id);
+        return {
+          loan: {
+            ...loan,
+            amountPaid,
+            recoveredAt: computeRecoveredAt(amountPaid, loan.totalAmount, loan.recoveredAt),
+          },
+          reopened: false,
+        };
+      }
+
+      return { loan, reopened: false };
+    });
+  } catch (error) {
+    if (isUniqueClientNameViolation(error)) {
+      await throwDuplicateActiveClientError();
     }
-    return loan;
-  });
+    throw error;
+  }
 }
 
 export async function updateLoan(userId: string, loanId: string, input: UpdateLoanInput) {
-  return prisma.$transaction(async (tx) => {
-    const existing = await getOwnedLoanOrThrow(tx, userId, loanId);
-    if (input.totalAmount < existing.amountPaid) {
-      const { t, locale } = await getBusinessRuleValidator();
-      throw new ValidationError({
-        totalAmount: [
-          t("totalBelowPaid", { amount: formatCurrency(existing.amountPaid, locale) }),
-        ],
-      });
-    }
-    const recoveredAt = computeRecoveredAt(
-      existing.amountPaid,
-      input.totalAmount,
-      existing.recoveredAt
-    );
+  const { clientName, clientNameKey } = parseClientNameFields(input);
 
-    return tx.loan.update({
-      where: { id: loanId },
-      data: {
-        clientName: input.clientName,
-        totalAmount: input.totalAmount,
-        recoveredAt,
-        loanDate: input.loanDate ?? existing.loanDate,
-        description: input.description?.trim() || null,
-        clientTrust: input.clientTrust,
-      },
+  if (isBlankClientName(clientName)) {
+    const { t } = await getBusinessRuleValidator();
+    throw new ValidationError({ clientName: [t("clientNameRequired")] });
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existing = await getOwnedLoanOrThrow(tx, userId, loanId);
+
+      if (clientNameKey !== existing.clientNameKey) {
+        await assertClientNameAvailableForRename(tx, userId, clientNameKey, loanId);
+      }
+
+      if (input.totalAmount < existing.amountPaid) {
+        const { t, locale } = await getBusinessRuleValidator();
+        throw new ValidationError({
+          totalAmount: [
+            t("totalBelowPaid", { amount: formatCurrency(existing.amountPaid, locale) }),
+          ],
+        });
+      }
+
+      const recoveredAt = computeRecoveredAt(
+        existing.amountPaid,
+        input.totalAmount,
+        existing.recoveredAt
+      );
+
+      return tx.loan.update({
+        where: { id: loanId },
+        data: {
+          clientName,
+          clientNameKey,
+          totalAmount: input.totalAmount,
+          recoveredAt,
+          loanDate: input.loanDate ?? existing.loanDate,
+          description: input.description?.trim() || null,
+          clientTrust: input.clientTrust,
+        },
+      });
     });
-  });
+  } catch (error) {
+    if (isUniqueClientNameViolation(error)) {
+      await throwDuplicateActiveClientError();
+    }
+    throw error;
+  }
 }
 
 export async function softDeleteLoan(userId: string, loanId: string) {
@@ -182,7 +396,29 @@ export async function restoreLoan(userId: string, loanId: string) {
     where: { id: loanId, userId, deletedAt: { gte: deletedRetentionCutoff() } },
   });
   if (!loan) throw new NotFoundError(await getErrorMessage("deletedLoanNotFound"));
-  return prisma.loan.update({ where: { id: loanId }, data: { deletedAt: null } });
+
+  const conflict = await prisma.loan.findFirst({
+    where: {
+      userId,
+      clientNameKey: loan.clientNameKey,
+      deletedAt: null,
+      id: { not: loanId },
+    },
+    select: { id: true, amountPaid: true, totalAmount: true },
+  });
+
+  if (conflict) {
+    await throwClientNameTakenError();
+  }
+
+  try {
+    return await prisma.loan.update({ where: { id: loanId }, data: { deletedAt: null } });
+  } catch (error) {
+    if (isUniqueClientNameViolation(error)) {
+      await throwDuplicateActiveClientError();
+    }
+    throw error;
+  }
 }
 
 export async function purgeExpiredDeletedLoans() {
@@ -297,3 +533,6 @@ export async function deletePayment(userId: string, loanId: string, paymentId: s
     return { amountPaid, outstanding: getOutstanding(loan.totalAmount, amountPaid) };
   });
 }
+
+// Re-export for API routes that need payment listing.
+export { listPayments };

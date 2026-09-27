@@ -320,7 +320,23 @@
     "failedLoadLoan": "Failed to load loan",
     "editLoan": "Edit Loan",
     "editLoanDescription": "Update loan details for {clientName}.",
-    "loanUpdated": "Loan updated for {clientName}"
+    "loanUpdated": "Loan updated for {clientName}",
+    "loanReopened": "Reopened account for {clientName} with the new loan amount added",
+    "downloadStatement": "Download PDF",
+    "clientNameRecoveredHint": "This client was fully recovered. Saving will reopen their account and keep their payment history.",
+    "clientNameActiveDuplicate": "You already have an active loan for this client."
+  },
+  "pdf": {
+    "statementTitle": "Loan Statement",
+    "client": "Client",
+    "issuer": "Issued by",
+    "generatedOn": "Generated on",
+    "noPayments": "No payments recorded for this loan.",
+    "columnDate": "Date",
+    "columnAmount": "Amount",
+    "columnNote": "Note",
+    "filenamePrefix": "loan-statement",
+    "disclaimer": "This document is a loan statement for informational purposes. It is not a tax invoice."
   },
   "settings": {
     "title": "Settings",
@@ -393,6 +409,7 @@
     "action_loan_updated": "Loan updated",
     "action_loan_deleted": "Loan deleted",
     "action_loan_restored": "Loan restored",
+    "action_loan_statement_exported": "Loan statement exported",
     "action_loans_purged": "Expired deleted loans purged",
     "action_loans_recovered_purged": "Expired recovered loans purged",
     "action_payment_added": "Payment recorded",
@@ -444,6 +461,8 @@
     "passwordRequired": "Password is required",
     "passwordsMismatch": "Passwords do not match",
     "clientNameRequired": "Client name is required",
+    "clientNameDuplicateActive": "You already have an active loan for this client.",
+    "clientNameTaken": "A client with this name already exists.",
     "totalAmountInt": "Total amount must be a whole number",
     "totalAmountPositive": "Total amount must be greater than 0",
     "amountPaidInt": "Amount paid must be a whole number",

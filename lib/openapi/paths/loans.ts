@@ -125,11 +125,51 @@ export const loanPaths: OpenAPIV3.PathsObject = {
         },
       },
       responses: {
-        "201": createdResponse({
+        "200": okResponse({
           type: "object",
-          required: ["loan"],
+          required: ["loan", "reopened"],
           properties: {
             loan: ref("Loan"),
+            reopened: { type: "boolean" },
+          },
+        }),
+        "201": createdResponse({
+          type: "object",
+          required: ["loan", "reopened"],
+          properties: {
+            loan: ref("Loan"),
+            reopened: { type: "boolean", enum: [false] },
+          },
+        }),
+        "409": errorResponses.Conflict,
+        ...managerErrors,
+      },
+    },
+  },
+  "/api/loans/client-lookup": {
+    get: {
+      tags: ["Loans"],
+      summary: "Look up a client name",
+      description:
+        "Manager-only. Returns whether a normalized client name is new, matches an active loan, or matches a recovered client (eligible for reopen).",
+      operationId: "lookupClientName",
+      security: managerSecurity,
+      parameters: [
+        {
+          name: "clientName",
+          in: "query",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      responses: {
+        "200": okResponse({
+          type: "object",
+          required: ["status"],
+          properties: {
+            status: { type: "string", enum: ["new", "active", "recovered"] },
+            loanId: { type: "string" },
+            clientName: { type: "string" },
           },
         }),
         ...managerErrors,
@@ -209,6 +249,28 @@ export const loanPaths: OpenAPIV3.PathsObject = {
       parameters: [loanIdParam],
       responses: {
         "200": okResponse(ref("SuccessFlag")),
+        ...managerErrors,
+      },
+    },
+  },
+  "/api/loans/{id}/statement": {
+    get: {
+      tags: ["Loans"],
+      summary: "Download loan statement PDF",
+      description:
+        "Manager-only. Generates a localized PDF loan statement (relevé de prêt) for the owned loan, including payment history.",
+      operationId: "downloadLoanStatement",
+      security: managerSecurity,
+      parameters: [loanIdParam],
+      responses: {
+        "200": {
+          description: "PDF loan statement",
+          content: {
+            "application/pdf": {
+              schema: { type: "string", format: "binary" },
+            },
+          },
+        },
         ...managerErrors,
       },
     },

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatClientNameForStorage } from "@/lib/client-name";
 import {
   getValidationMessages,
   type ValidationMessages,
@@ -11,6 +12,8 @@ const defaultMessages: ValidationMessages = {
   passwordRequired: "Password is required",
   passwordsMismatch: "Passwords do not match",
   clientNameRequired: "Client name is required",
+  clientNameDuplicateActive: "You already have an active loan for this client.",
+  clientNameTaken: "A client with this name already exists.",
   totalAmountInt: "Total amount must be a whole number",
   totalAmountPositive: "Total amount must be greater than 0",
   amountPaidInt: "Amount paid must be a whole number",
@@ -47,7 +50,10 @@ export function createLoginSchema(m: ValidationMessages) {
 
 export function createLoanFieldsSchema(m: ValidationMessages) {
   return z.object({
-    clientName: z.string().min(1, m.clientNameRequired),
+    clientName: z
+      .string()
+      .transform((value) => formatClientNameForStorage(value))
+      .pipe(z.string().min(1, m.clientNameRequired)),
     totalAmount: z.coerce
       .number()
       .int(m.totalAmountInt)

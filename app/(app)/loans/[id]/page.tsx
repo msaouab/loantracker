@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, FileDown, Pencil, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { PageHeader, PageHeaderAction } from "@/components/shared/page-header";
 import { LoanDetailSkeleton } from "@/components/loans/loan-skeletons";
@@ -58,6 +58,13 @@ export default function LoanDetailPage({
           href="/loans"
           label={t("backToList")}
           icon={ArrowLeft}
+          variant="outline"
+        />
+        <PageHeaderAction
+          href={`/api/loans/${loan.id}/statement`}
+          download
+          label={t("downloadStatement")}
+          icon={FileDown}
           variant="outline"
         />
         <PageHeaderAction
